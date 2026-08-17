@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-st.title("🎮 P&L tool by Hoàng Thành Long (VplayHN)")
+st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -361,8 +361,12 @@ with rendered_tabs[2]:
         num_rows="dynamic",
         use_container_width=True, hide_index=True, column_config=col_cfg_adr, key=f"ed_ltv_adr_{cur_proj}"
     )
-    st.session_state[f"ltv_android_{cur_proj}"] = edited_ltv_adr
     
+    # BẮT SỰ KIỆN PASTE VÀ ÉP LÀM MỚI NGAY
+    if not edited_ltv_adr.astype(str).equals(st.session_state[f"ltv_android_{cur_proj}"].astype(str)):
+        st.session_state[f"ltv_android_{cur_proj}"] = edited_ltv_adr
+        st.rerun()
+        
     k_adr_df = edited_ltv_adr.copy()
     for c in ALL_D_COLS: k_adr_df[c] = pd.to_numeric(k_adr_df[c], errors="coerce").fillna(0.0)
     k_adr_df['K1'] = np.where(k_adr_df['D1'] > 0, 1.0, 0.0)
@@ -381,8 +385,12 @@ with rendered_tabs[3]:
         num_rows="dynamic",
         use_container_width=True, hide_index=True, column_config=col_cfg_ios, key=f"ed_ltv_ios_{cur_proj}"
     )
-    st.session_state[f"ltv_ios_{cur_proj}"] = edited_ltv_ios
     
+    # BẮT SỰ KIỆN PASTE VÀ ÉP LÀM MỚI NGAY
+    if not edited_ltv_ios.astype(str).equals(st.session_state[f"ltv_ios_{cur_proj}"].astype(str)):
+        st.session_state[f"ltv_ios_{cur_proj}"] = edited_ltv_ios
+        st.rerun()
+        
     k_ios_df = edited_ltv_ios.copy()
     for c in ALL_D_COLS: k_ios_df[c] = pd.to_numeric(k_ios_df[c], errors="coerce").fillna(0.0)
     k_ios_df['K1'] = np.where(k_ios_df['D1'] > 0, 1.0, 0.0)
@@ -518,6 +526,7 @@ with rendered_tabs[4]:
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
             
+            # CÔNG THỨC MỚI: CPN = (Marketing + LF&Branding) / NRU
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
