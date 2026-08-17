@@ -4,12 +4,8 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import io
-import json
-import requests
 
 st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
-
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9Vn-O9aaUjikdUMUnb5h063WCAlVnFVK2SwcIGYSRxj3qeoB8h1-T909WO3KtVWl9sw/exec"
 
 # ==========================================
 # CẤU HÌNH TÀI KHOẢN & PHÂN QUYỀN
@@ -21,8 +17,7 @@ USER_DATABASE = {
         "role": "admin",
         "can_edit_traffic": True,
         "can_edit_ltv": True,
-        "can_view_pnl": True,
-        "can_sync_cloud": True
+        "can_view_pnl": True
     },
     "mkt_lead": {
         "password": "123",
@@ -30,8 +25,7 @@ USER_DATABASE = {
         "role": "marketing",
         "can_edit_traffic": True,
         "can_edit_ltv": False,
-        "can_view_pnl": False,
-        "can_sync_cloud": True
+        "can_view_pnl": False
     },
     "product_lead": {
         "password": "123",
@@ -39,8 +33,7 @@ USER_DATABASE = {
         "role": "product",
         "can_edit_traffic": False,
         "can_edit_ltv": True,
-        "can_view_pnl": False,
-        "can_sync_cloud": True
+        "can_view_pnl": False
     },
     "bod_viewer": {
         "password": "123",
@@ -48,8 +41,7 @@ USER_DATABASE = {
         "role": "viewer",
         "can_edit_traffic": False,
         "can_edit_ltv": False,
-        "can_view_pnl": True,
-        "can_sync_cloud": False
+        "can_view_pnl": True
     }
 }
 
@@ -190,8 +182,8 @@ def get_default_ltv(is_android=True):
         })
 
 if "project_names" not in st.session_state:
-    st.session_state.project_names = ["Dự án 1 (T029)"]
-    st.session_state.current_project = "Dự án 1 (T029)"
+    st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
+    st.session_state.current_project = "T037"
 
 # ==========================================
 # SIDEBAR
@@ -224,44 +216,6 @@ with st.sidebar:
                     st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0}
                     st.session_state.current_project = new_proj_name
                     st.rerun()
-
-    if current_user["can_sync_cloud"]:
-        st.markdown("---")
-        st.header("☁️ Đồng Bộ Cloud")
-        if st.button("🔄 Kéo Toàn Bộ Dữ Liệu Từ Sheet Về", help="Bấm nút này để quét và tải toàn bộ các dự án/tab từ Google Sheet về máy."):
-            with st.spinner("Đang quét và tải dữ liệu từ các Tab Google Sheet..."):
-                try:
-                    resp = requests.get(GOOGLE_SCRIPT_URL, timeout=25)
-                    data = resp.json()
-                    
-                    if isinstance(data, dict) and "project_names" in data and len(data["project_names"]) > 0:
-                        st.session_state.project_names = data["project_names"]
-                        st.session_state.current_project = data["current_project"]
-                        for p, p_val in data["projects_data"].items():
-                            if p_val.get("traffic_android"):
-                                tr_ads = p_val["traffic_android"]
-                                if len(tr_ads) > 1:
-                                    st.session_state[f"traffic_android_{p}"] = pd.DataFrame(tr_ads[1:], columns=tr_ads[0])
-                            if p_val.get("traffic_ios"):
-                                tr_ios = p_val["traffic_ios"]
-                                if len(tr_ios) > 1:
-                                    st.session_state[f"traffic_ios_{p}"] = pd.DataFrame(tr_ios[1:], columns=tr_ios[0])
-                            if p_val.get("ltv_android"):
-                                ltv_ads = p_val["ltv_android"]
-                                if len(ltv_ads) > 1:
-                                    st.session_state[f"ltv_android_{p}"] = pd.DataFrame(ltv_ads[1:], columns=ltv_ads[0])
-                            if p_val.get("ltv_ios"):
-                                ltv_ios = p_val["ltv_ios"]
-                                if len(ltv_ios) > 1:
-                                    st.session_state[f"ltv_ios_{p}"] = pd.DataFrame(ltv_ios[1:], columns=ltv_ios[0])
-                            st.session_state[f"params_{p}"] = p_val.get("params", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
-                            
-                        st.success("🎉 Đã kéo và đồng bộ thành công toàn bộ các dự án (T037, v.v.) từ Google Sheet về máy bạn!")
-                        st.rerun()
-                    else:
-                        st.warning("Không tìm thấy dữ liệu tab dự án nào trên Google Sheet.")
-                except Exception as e:
-                    st.error(f"Lỗi kết nối hoặc phân tích dữ liệu: {e}")
 
     if current_user["role"] == "admin":
         st.markdown("---")
@@ -492,8 +446,7 @@ if "📊 5. Báo Cáo P&L Tổng Hợp" in tabs_to_show:
         ltv_ios = st.session_state[f"ltv_ios_{cur_proj}"]
         params = st.session_state.get(f"params_{cur_proj}", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
         
-        col_btn1, col_btn2 = st.columns([1, 2])
-        run_sim = col_btn1.button(f"🚀 Chạy Mô Phỏng Tổng ({cur_proj})", type="primary")
+        run_sim = st.button(f"🚀 Chạy Mô Phỏng Tổng ({cur_proj})", type="primary")
         
         if run_sim or f"pnl_res_{cur_proj}" in st.session_state:
             with st.spinner("Đang tính ma trận Cohort hợp nhất..."):
@@ -548,36 +501,22 @@ if "📊 5. Báo Cáo P&L Tổng Hợp" in tabs_to_show:
                 total_mkt = res['Marketing (UA+Tax)'].sum()
                 cpu_total = total_mkt / total_nru if total_nru > 0 else 0
                 
-                # Nút đồng bộ Cloud
-                if col_btn2.button("☁️ Lưu Toàn Bộ Dữ Liệu Vào Google Sheet"):
-                    try:
-                        with st.spinner("Đang lưu dữ liệu sang Google Sheet..."):
-                            all_projects_payload = {
-                                "project_names": st.session_state.project_names,
-                                "current_project": st.session_state.current_project,
-                                "projects_data": {}
-                            }
-                            for p in st.session_state.project_names:
-                                all_projects_payload["projects_data"][p] = {
-                                    "traffic_android": st.session_state.get(f"traffic_android_{p}", get_default_traffic(25, True)).to_dict(orient="records"),
-                                    "traffic_ios": st.session_state.get(f"traffic_ios_{p}", get_default_traffic(25, False)).to_dict(orient="records"),
-                                    "ob_daily_adr": st.session_state.get(f"ob_daily_adr_{p}", get_default_ob_daily(100000, 25000)).to_dict(orient="records"),
-                                    "ob_daily_ios": st.session_state.get(f"ob_daily_ios_{p}", get_default_ob_daily(50000, 32000)).to_dict(orient="records"),
-                                    "ltv_android": st.session_state.get(f"ltv_android_{p}", get_default_ltv(True)).to_dict(orient="records"),
-                                    "ltv_ios": st.session_state.get(f"ltv_ios_{p}", get_default_ltv(False)).to_dict(orient="records"),
-                                    "params": st.session_state.get(f"params_{p}", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
-                                }
-                            payload = {
-                                "project_name": cur_proj,
-                                "all_projects_payload": all_projects_payload
-                            }
-                            resp = requests.post(GOOGLE_SCRIPT_URL, data=json.dumps(payload), timeout=25)
-                            if resp.status_code == 200:
-                                st.success("🎉 Đã lưu toàn bộ số liệu chuẩn vào Google Sheet & DB_BACKUP!")
-                            else:
-                                st.error(f"Lỗi: {resp.text}")
-                    except Exception as ex:
-                        st.error(f"Lỗi: {ex}")
+                # Nút tải file Excel để chia sẻ nội bộ giữa các máy trong team
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                    tr_adr.to_excel(writer, sheet_name='Traffic Android', index=False)
+                    tr_ios.to_excel(writer, sheet_name='Traffic iOS', index=False)
+                    ltv_adr.to_excel(writer, sheet_name='LTV Android', index=False)
+                    ltv_ios.to_excel(writer, sheet_name='LTV iOS', index=False)
+                    res.to_excel(writer, sheet_name='P&L Tong Hop', index=False)
+                buffer.seek(0)
+                
+                st.download_button(
+                    label=f"📥 Tải File P&L Tổng - {cur_proj} (Gửi cho team)",
+                    data=buffer,
+                    file_name=f"PNL_{cur_proj}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
                 
                 # HTML Table Render
                 html = '<div class="dataframe-container"><table class="custom-pnl">'
