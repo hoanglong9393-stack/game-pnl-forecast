@@ -228,30 +228,40 @@ with st.sidebar:
     if current_user["can_sync_cloud"]:
         st.markdown("---")
         st.header("☁️ Đồng Bộ Cloud")
-        if st.button("🔄 Kéo Dữ Liệu Từ Sheet Về"):
-            with st.spinner("Đang tải dữ liệu từ Google Sheet..."):
+        if st.button("🔄 Kéo Toàn Bộ Dữ Liệu Từ Sheet Về", help="Bấm nút này để quét và tải toàn bộ các dự án/tab từ Google Sheet về máy."):
+            with st.spinner("Đang quét và tải dữ liệu từ các Tab Google Sheet..."):
                 try:
-                    resp = requests.get(GOOGLE_SCRIPT_URL, timeout=20)
+                    resp = requests.get(GOOGLE_SCRIPT_URL, timeout=25)
                     data = resp.json()
-                    if isinstance(data, dict) and "project_names" in data:
+                    
+                    if isinstance(data, dict) and "project_names" in data and len(data["project_names"]) > 0:
                         st.session_state.project_names = data["project_names"]
                         st.session_state.current_project = data["current_project"]
                         for p, p_val in data["projects_data"].items():
-                            st.session_state[f"traffic_android_{p}"] = pd.DataFrame(p_val["traffic_android"])
-                            st.session_state[f"traffic_ios_{p}"] = pd.DataFrame(p_val["traffic_ios"])
-                            if "ob_daily_adr" in p_val: 
-                                st.session_state[f"ob_daily_adr_{p}"] = pd.DataFrame(p_val["ob_daily_adr"])
-                            if "ob_daily_ios" in p_val: 
-                                st.session_state[f"ob_daily_ios_{p}"] = pd.DataFrame(p_val["ob_daily_ios"])
-                            st.session_state[f"ltv_android_{p}"] = pd.DataFrame(p_val["ltv_android"])
-                            st.session_state[f"ltv_ios_{p}"] = pd.DataFrame(p_val["ltv_ios"])
-                            st.session_state[f"params_{p}"] = p_val["params"]
-                        st.success("🎉 Đã khôi phục thành công toàn bộ dự án từ Google Sheet!")
+                            if p_val.get("traffic_android"):
+                                tr_ads = p_val["traffic_android"]
+                                if len(tr_ads) > 1:
+                                    st.session_state[f"traffic_android_{p}"] = pd.DataFrame(tr_ads[1:], columns=tr_ads[0])
+                            if p_val.get("traffic_ios"):
+                                tr_ios = p_val["traffic_ios"]
+                                if len(tr_ios) > 1:
+                                    st.session_state[f"traffic_ios_{p}"] = pd.DataFrame(tr_ios[1:], columns=tr_ios[0])
+                            if p_val.get("ltv_android"):
+                                ltv_ads = p_val["ltv_android"]
+                                if len(ltv_ads) > 1:
+                                    st.session_state[f"ltv_android_{p}"] = pd.DataFrame(ltv_ads[1:], columns=ltv_ads[0])
+                            if p_val.get("ltv_ios"):
+                                ltv_ios = p_val["ltv_ios"]
+                                if len(ltv_ios) > 1:
+                                    st.session_state[f"ltv_ios_{p}"] = pd.DataFrame(ltv_ios[1:], columns=ltv_ios[0])
+                            st.session_state[f"params_{p}"] = p_val.get("params", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
+                            
+                        st.success("🎉 Đã kéo và đồng bộ thành công toàn bộ các dự án (T037, v.v.) từ Google Sheet về máy bạn!")
                         st.rerun()
                     else:
-                        st.warning("Chưa có bản sao lưu hợp lệ trên Google Sheet.")
+                        st.warning("Không tìm thấy dữ liệu tab dự án nào trên Google Sheet.")
                 except Exception as e:
-                    st.error(f"Lỗi: {e}")
+                    st.error(f"Lỗi kết nối hoặc phân tích dữ liệu: {e}")
 
     if current_user["role"] == "admin":
         st.markdown("---")
@@ -403,6 +413,19 @@ if "🍏 4. LTV iOS" in tabs_to_show:
 # ==========================================
 # ENGINE CALCULATION (PHASE MAPPING + DAILY OB TRAFFIC)
 # ==========================================
+def create_daily_ltv_curve(anchor_points):
+    days = sorted(anchor_points.keys())
+    max_day = 720
+    full_curve = np.zeros(max_day + 1)
+    for i in range(len(days) - 1):
+        d_start, d_end = days[i], days[i+1]
+        v_start, v_end = anchor_points[d_start], anchor_points[d_end]
+        full_curve[d_start:d_end+1] = np.linspace(v_start, v_end, d_end - d_start + 1)
+    last_day = days[-1]
+    last_val = anchor_points[last_day]
+    full_curve[last_day:max_day+1] = last_val
+    return full_curve
+
 def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     num_months = len(df_traffic)
     ltv_mapping = {}
@@ -529,7 +552,6 @@ if "📊 5. Báo Cáo P&L Tổng Hợp" in tabs_to_show:
                 if col_btn2.button("☁️ Lưu Toàn Bộ Dữ Liệu Vào Google Sheet"):
                     try:
                         with st.spinner("Đang lưu dữ liệu sang Google Sheet..."):
-                            # Đảm bảo toàn bộ 5 bảng đều lấy từ phiên bản mới nhất
                             all_projects_payload = {
                                 "project_names": st.session_state.project_names,
                                 "current_project": st.session_state.current_project,
