@@ -9,7 +9,7 @@ import requests
 
 st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNdEQThD8xUXDOEr397lTSLQdWrRd6u63KwC6P2U0G6qHOHWQhrj5uBpzN0yALWZI8Kw/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9Vn-O9aaUjikdUMUnb5h063WCAlVnFVK2SwcIGYSRxj3qeoB8h1-T909WO3KtVWl9sw/exec"
 
 # ==========================================
 # CUSTOM CSS
