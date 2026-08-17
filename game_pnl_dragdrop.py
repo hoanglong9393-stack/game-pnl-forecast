@@ -144,36 +144,51 @@ with st.sidebar:
     st.markdown("---")
     st.header("📤 Tải Lên Dữ Liệu (Excel)")
     uploaded_file = st.file_uploader("Upload file PNL_*.xlsx", type=["xlsx"])
+    
+    # SỬA LỖI VÒNG LẶP VÀ ĐỌC SỐ
     if uploaded_file is not None:
-        try:
-            excel_data = pd.ExcelFile(uploaded_file)
-            imported_proj_name = uploaded_file.name.replace("PNL_", "").replace(".xlsx", "")
-            if imported_proj_name not in st.session_state.project_names:
-                st.session_state.project_names.append(imported_proj_name)
-            
-            if 'Traffic Android' in excel_data.sheet_names:
-                st.session_state[f"traffic_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic Android')
-            if 'Traffic iOS' in excel_data.sheet_names:
-                st.session_state[f"traffic_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic iOS')
-            if 'LTV Android' in excel_data.sheet_names:
-                st.session_state[f"ltv_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV Android')
-            if 'LTV iOS' in excel_data.sheet_names:
-                st.session_state[f"ltv_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV iOS')
-                
-            st.session_state.current_project = imported_proj_name
-            st.success(f"Đã nạp thành công dự án '{imported_proj_name}' từ file Excel!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Lỗi đọc file Excel: {e}")
+        # Kiểm tra xem file này đã được đọc ở lần chạy trước chưa (tránh infinite loop)
+        if st.session_state.get("last_uploaded_file_id") != uploaded_file.file_id:
+            with st.spinner("Đang đọc file Excel..."):
+                try:
+                    excel_data = pd.ExcelFile(uploaded_file)
+                    imported_proj_name = uploaded_file.name.replace("PNL_", "").replace(".xlsx", "")
+                    if imported_proj_name not in st.session_state.project_names:
+                        st.session_state.project_names.append(imported_proj_name)
+                    
+                    if 'Traffic Android' in excel_data.sheet_names:
+                        st.session_state[f"traffic_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0)
+                    if 'Traffic iOS' in excel_data.sheet_names:
+                        st.session_state[f"traffic_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic iOS').fillna(0)
+                    if 'OB Daily Android' in excel_data.sheet_names:
+                        st.session_state[f"ob_daily_adr_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='OB Daily Android').fillna(0)
+                    if 'OB Daily iOS' in excel_data.sheet_names:
+                        st.session_state[f"ob_daily_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='OB Daily iOS').fillna(0)
+                    if 'LTV Android' in excel_data.sheet_names:
+                        st.session_state[f"ltv_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV Android').fillna(0)
+                    if 'LTV iOS' in excel_data.sheet_names:
+                        st.session_state[f"ltv_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV iOS').fillna(0)
+                    if 'Params' in excel_data.sheet_names:
+                        p_df = pd.read_excel(excel_data, sheet_name='Params')
+                        st.session_state[f"params_{imported_proj_name}"] = p_df.to_dict('records')[0]
+                        
+                    st.session_state.current_project = imported_proj_name
+                    # Lưu lại ID file để không đọc lại ở lần refresh tiếp theo
+                    st.session_state["last_uploaded_file_id"] = uploaded_file.file_id
+                    
+                    st.success(f"Đã nạp thành công dự án '{imported_proj_name}' từ file Excel!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Lỗi đọc file Excel: {e}")
 
     st.markdown("---")
     st.header("💸 Cấu Hình Chi Phí (%)")
     if f"params_{cur_proj}" not in st.session_state:
         st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0}
     p_params = st.session_state[f"params_{cur_proj}"]
-    rev_share_pct = st.number_input("Revenue Share Dev (%)", value=float(p_params["rev_share"]), step=0.1)
-    vat_pct = st.number_input("VAT (%)", value=float(p_params["vat"]), step=0.5)
-    payment_fee_pct = st.number_input("Payment Fee (%)", value=float(p_params["payment_fee"]), step=0.5)
+    rev_share_pct = st.number_input("Revenue Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1)
+    vat_pct = st.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5)
+    payment_fee_pct = st.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5)
     st.session_state[f"params_{cur_proj}"] = {"rev_share": rev_share_pct, "vat": vat_pct, "payment_fee": payment_fee_pct}
 
 # State init
@@ -432,8 +447,11 @@ with rendered_tabs[4]:
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 tr_adr.to_excel(writer, sheet_name='Traffic Android', index=False)
                 tr_ios.to_excel(writer, sheet_name='Traffic iOS', index=False)
+                ob_adr.to_excel(writer, sheet_name='OB Daily Android', index=False)
+                ob_ios.to_excel(writer, sheet_name='OB Daily iOS', index=False)
                 ltv_adr.to_excel(writer, sheet_name='LTV Android', index=False)
                 ltv_ios.to_excel(writer, sheet_name='LTV iOS', index=False)
+                pd.DataFrame([params]).to_excel(writer, sheet_name='Params', index=False)
                 res.to_excel(writer, sheet_name='P&L Tong Hop', index=False)
             buffer.seek(0)
             
