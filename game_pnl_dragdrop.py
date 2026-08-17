@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import io
-from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
@@ -463,6 +463,9 @@ def format_pnl_for_excel(res):
         
     df_with_kpi = pd.DataFrame([[""] + ["KPI"] * (len(df_export.columns) - 1)], columns=df_export.columns)
     df_export = pd.concat([df_with_kpi, df_export], ignore_index=True)
+    
+    # Rename rows for exact matching with styling logic
+    df_export['Dashboard'] = df_export['Dashboard'].replace('NRU', 'New Registed User')
     return df_export
 
 def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
@@ -489,29 +492,85 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
             ws.cell(row=r_idx, column=1, value=f"CẤU HÌNH LTV - {p}").font = Font(bold=True)
             ltv.to_excel(writer, sheet_name=p, startrow=r_idx, index=False)
 
-        # Định dạng Style Excel
+        # Định nghĩa MÀU SẮC cực chuẩn theo giao diện Web
+        fill_header = PatternFill(start_color="0B3E45", end_color="0B3E45", fill_type="solid")
+        fill_nru = PatternFill(start_color="F59E0B", end_color="F59E0B", fill_type="solid")
+        fill_cpn = PatternFill(start_color="FBBF24", end_color="FBBF24", fill_type="solid")
+        fill_rev_cost = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
+        fill_spent = PatternFill(start_color="94A3B8", end_color="94A3B8", fill_type="solid")
+        fill_opex = PatternFill(start_color="FCD34D", end_color="FCD34D", fill_type="solid")
+        fill_profit_pos = PatternFill(start_color="22C55E", end_color="22C55E", fill_type="solid")
+        fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+        font_white_bold = Font(color="FFFFFF", bold=True)
+        font_black_bold = Font(color="000000", bold=True)
+        font_black = Font(color="000000")
+        font_white = Font(color="FFFFFF")
+        
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+        # Áp dụng Format cho bảng P&L (VNĐ và USD)
         for sheet_name in ['P&L Tổng Hợp (VNĐ)', 'P&L (USD)']:
             ws = writer.book[sheet_name]
-            header_fill = PatternFill(start_color="0B3E45", end_color="0B3E45", fill_type="solid")
-            header_font = Font(color="FFFFFF", bold=True)
-            row_header_font = Font(bold=True)
             
+            # Đổ màu Dòng Header
             for cell in ws[1]:
-                cell.fill = header_fill
-                cell.font = header_font
-                cell.alignment = Alignment(horizontal="center")
-            
+                cell.fill = fill_header
+                cell.font = font_white_bold
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                cell.border = thin_border
+                
+            # Đổ màu theo giá trị ở cột đầu tiên (Cột Dashboard)
             for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
-                row[0].font = row_header_font
-                for cell in row[1:]:
-                    if isinstance(cell.value, (int, float)):
-                        if "Tỷ Trọng" in str(row[0].value):
+                row_label = str(row[0].value)
+                
+                # Mặc định là trắng chữ đen
+                current_fill = fill_white
+                current_font = font_black
+                
+                if row_label == 'New Registed User':
+                    current_fill = fill_nru
+                    current_font = font_black_bold
+                elif row_label == 'CPN':
+                    current_fill = fill_cpn
+                elif row_label in ['Revenue', 'Tổng Chi Phí']:
+                    current_fill = fill_rev_cost
+                    current_font = font_white_bold
+                elif row_label == 'Spent':
+                    current_fill = fill_spent
+                    current_font = font_black_bold
+                elif row_label in ['Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding', 'Revenue share dev', 'VAT', 'Payment channel fee']:
+                    current_fill = fill_opex
+                elif row_label == 'Lợi Nhuận':
+                    current_font = font_black_bold
+                    
+                for idx, cell in enumerate(row):
+                    cell_font = current_font
+                    cell_fill = current_fill
+                    
+                    # Nếu là Lợi Nhuận > 0 thì tô xanh lá cây chữ trắng giống Web
+                    if row_label in ['Lợi nhuận tháng', 'Lợi Nhuận'] and idx > 0:
+                        if isinstance(cell.value, (int, float)) and cell.value > 0:
+                            cell_fill = fill_profit_pos
+                            cell_font = font_white if row_label == 'Lợi nhuận tháng' else font_white_bold
+                            
+                    cell.fill = cell_fill
+                    cell.font = cell_font
+                    cell.border = thin_border
+                    
+                    # Fix cột và hàng (Đóng băng dòng Header & 2 cột Dashboard + Total)
+                    ws.freeze_panes = 'C3'
+                    
+                    # Fomat số VNĐ hoặc USD
+                    if idx > 0 and isinstance(cell.value, (int, float)):
+                        if "Tỷ Trọng" in row_label:
                             cell.number_format = '0.00%'
                         elif sheet_name == 'P&L (USD)':
                             cell.number_format = '"$"#,##0.00'
                         else:
                             cell.number_format = '#,##0'
 
+        # Căn lề tự động kích thước cột
         for sheet_name in writer.book.sheetnames:
             ws = writer.book[sheet_name]
             for col in ws.columns:
@@ -616,6 +675,7 @@ with rendered_tabs[-1]:
                 ob_df = st.session_state[f"ob_daily_{p}_{cur_proj}"]
                 ltv_df = st.session_state[f"ltv_{p}_{cur_proj}"]
                 
+                # Tích hợp số Comeback vào ngày 1 của OB df logic
                 pre_nru = float(tr_df.loc[tr_df['Tháng'] == 'Pre-launch', 'NRU'].sum())
                 ob_calc = ob_df.copy()
                 if len(ob_calc) > 0:
