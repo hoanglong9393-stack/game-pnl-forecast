@@ -9,11 +9,10 @@ import requests
 
 st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-# URL Webhook Google Apps Script của bạn
-GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4DEnQ-dF20pnblMCY_hkd6IUknQ9vnyateot6lUdIOVGXLZQJ9LFie3WZhYz3eWI4zw/exec"
+GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwNdEQThD8xUXDOEr397lTSLQdWrRd6u63KwC6P2U0G6qHOHWQhrj5uBpzN0yALWZI8Kw/exec"
 
 # ==========================================
-# CUSTOM CSS (ĐỊNH DẠNG BẢNG MÀU SẮC NHƯ EXCEL)
+# CUSTOM CSS
 # ==========================================
 st.markdown("""
 <style>
@@ -88,7 +87,7 @@ if "project_names" not in st.session_state:
     st.session_state.current_project = "Dự án 1 (T029)"
 
 # ==========================================
-# KHU VỰC QUẢN LÝ DỰ ÁN (SIDEBAR)
+# KHU VỰC QUẢN LÝ DỰ ÁN & ĐỒNG BỘ CLOUD (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.header("📁 Quản Lý Dự Án")
@@ -116,6 +115,28 @@ with st.sidebar:
                 st.warning("Tên dự án đã tồn tại!")
 
     st.markdown("---")
+    st.header("☁️ Đồng Bộ Máy Khác (Google Sheet)")
+    
+    if st.button("🔄 Kéo Toàn Bộ Dữ Liệu Từ Sheet Về", help="Bấm nút này khi bạn mở web trên máy mới để lấy lại tất cả dự án đã lưu."):
+        with st.spinner("Đang tải toàn bộ dữ liệu từ Google Sheet..."):
+            try:
+                resp = requests.get(GOOGLE_SCRIPT_URL, timeout=20)
+                data = resp.json()
+                if "project_names" in data:
+                    st.session_state.project_names = data["project_names"]
+                    st.session_state.current_project = data["current_project"]
+                    for p, p_val in data["projects_data"].items():
+                        st.session_state[f"input_df_{p}"] = pd.DataFrame(p_val["input_df"])
+                        st.session_state[f"ltv_df_{p}"] = pd.DataFrame(p_val["ltv_df"])
+                        st.session_state[f"params_{p}"] = p_val["params"]
+                    st.success("🎉 Đã khôi phục thành công toàn bộ dự án từ Google Sheet!")
+                    st.rerun()
+                else:
+                    st.warning("Google Sheet chưa có bản sao lưu nào. Hãy bấm 'Lưu Toàn Bộ Dữ Liệu Vào Google Sheet' trước.")
+            except Exception as e:
+                st.error(f"Lỗi tải dữ liệu: {e}")
+
+    st.markdown("---")
     st.header("💸 Cấu Hình Chi Phí Dự Án Này (%)")
     
     if f"params_{cur_proj}" not in st.session_state:
@@ -139,7 +160,6 @@ if f"input_df_{cur_proj}" not in st.session_state:
 if f"ltv_df_{cur_proj}" not in st.session_state:
     st.session_state[f"ltv_df_{cur_proj}"] = get_default_ltv()
 
-# Bổ sung các cột D mở rộng nếu chưa có trong state cũ
 for col_d in ALL_D_COLS:
     if col_d not in st.session_state[f"ltv_df_{cur_proj}"].columns:
         last_val = st.session_state[f"ltv_df_{cur_proj}"]["D180"] if "D180" in st.session_state[f"ltv_df_{cur_proj}"].columns else 50000
@@ -336,29 +356,33 @@ def format_cell_value(val, is_pct=False):
     return f"{val:,.0f}"
 
 # ==========================================
-# HÀM XUẤT MA TRẬN P&L SANG DẠNG 2D ARRAY
+# GÓI DỮ LIỆU ĐỂ LƯU TOÀN DIỆN VÀO GOOGLE SHEET
 # ==========================================
-def prepare_pnl_matrix_for_sheet(res):
-    total_nru = res['NRU'].sum()
-    total_mkt = res['Marketing (UA+Tax)'].sum()
-    cpu_total = total_mkt / total_nru if total_nru > 0 else 0
-    months = list(res['Tháng'])
-
-    rows = []
-    # Row 1: Header
-    rows.append(["Dashboard", "Total"] + months)
-    # Row 2: KPI
-    rows.append(["", "KPI"] + ["KPI"] * len(months))
-    # Row 3: NRU
-    rows.append(["New Registed User", float(total_nru)] + list(res['NRU'].astype(float)))
-    # Row 4: CPU
-    rows.append(["Cost per User", float(cpu_total)] + list(res['Cost per User'].astype(float)))
-    # Row 5: Revenue
-    rows.append(["Revenue", float(res["Revenue"].sum())] + list(res['Revenue'].astype(float)))
-    # Row 6: Spent Header
-    rows.append(["Spent", ""] + [""] * len(months))
+def export_all_to_google_sheet(cur_proj, df_input, df_ltv, res_pnl):
+    traffic_rows = [df_input.columns.tolist()] + df_input.fillna("").values.tolist()
     
-    # OPEX Rows
+    k_df = df_ltv.copy()
+    for c in ALL_D_COLS:
+        if c in k_df.columns:
+            k_df[c] = pd.to_numeric(k_df[c], errors="coerce").fillna(0.0)
+    k_df['K1'] = np.where(k_df['D1'] > 0, 1.0, 0.0)
+    for d in ALL_D_TARGETS:
+        k_df[f'K{d}'] = np.where(k_df['D1'] > 0, k_df[f'D{d}'] / k_df['D1'], 0.0)
+    ltv_rows = [k_df.columns.tolist()] + k_df.fillna("").values.tolist()
+    
+    total_nru = res_pnl['NRU'].sum()
+    total_mkt = res_pnl['Marketing (UA+Tax)'].sum()
+    cpu_total = total_mkt / total_nru if total_nru > 0 else 0
+    months = list(res_pnl['Tháng'])
+
+    pnl_rows = []
+    pnl_rows.append(["Dashboard", "Total"] + months)
+    pnl_rows.append(["", "KPI"] + ["KPI"] * len(months))
+    pnl_rows.append(["New Registed User", float(total_nru)] + list(res_pnl['NRU'].astype(float)))
+    pnl_rows.append(["Cost per User", float(cpu_total)] + list(res_pnl['Cost per User'].astype(float)))
+    pnl_rows.append(["Revenue", float(res_pnl["Revenue"].sum())] + list(res_pnl['Revenue'].astype(float)))
+    pnl_rows.append(["Spent", ""] + [""] * len(months))
+    
     opex_items = [
         ('Personel', 'Nhân sự (VNĐ)'), ('Server', 'Server (VNĐ)'),
         ('Marketing (UA+Tax)', 'Marketing (UA+Tax)'), ('LF + Branding', 'LF + Branding (VNĐ)'),
@@ -366,19 +390,36 @@ def prepare_pnl_matrix_for_sheet(res):
         ('Payment channel fee', 'Payment channel fee')
     ]
     for label, col in opex_items:
-        rows.append([label, float(res[col].sum())] + list(res[col].astype(float)))
+        pnl_rows.append([label, float(res_pnl[col].sum())] + list(res_pnl[col].astype(float)))
         
-    # Total Cost
-    rows.append(["Tổng Chi Phí", float(res["Tổng Chi Phí"].sum())] + list(res['Tổng Chi Phí'].astype(float)))
-    # Profit Month
-    rows.append(["Lợi nhuận tháng", ""] + list(res['Lợi nhuận tháng'].astype(float)))
-    # Cumulative Profit
-    rows.append(["Lợi Nhuận", float(res['Lợi Nhuận'].iloc[-1])] + list(res['Lợi Nhuận'].astype(float)))
-    # ROI
-    avg_mkt_rev = total_mkt / res["Revenue"].sum() if res["Revenue"].sum() > 0 else 0
-    rows.append(["Tỷ Trọng MKT/REV", f"{avg_mkt_rev*100:.2f}%"] + [f"{v*100:.2f}%" for v in res['Tỷ Trọng MKT/REV']])
+    pnl_rows.append(["Tổng Chi Phí", float(res_pnl["Tổng Chi Phí"].sum())] + list(res_pnl['Tổng Chi Phí'].astype(float)))
+    pnl_rows.append(["Lợi nhuận tháng", ""] + list(res_pnl['Lợi nhuận tháng'].astype(float)))
+    pnl_rows.append(["Lợi Nhuận", float(res_pnl['Lợi Nhuận'].iloc[-1])] + list(res_pnl['Lợi Nhuận'].astype(float)))
+    
+    avg_mkt_rev = total_mkt / res_pnl["Revenue"].sum() if res_pnl["Revenue"].sum() > 0 else 0
+    pnl_rows.append(["Tỷ Trọng MKT/REV", f"{avg_mkt_rev*100:.2f}%"] + [f"{v*100:.2f}%" for v in res_pnl['Tỷ Trọng MKT/REV']])
 
-    return rows
+    all_projects_payload = {
+        "project_names": st.session_state.project_names,
+        "current_project": st.session_state.current_project,
+        "projects_data": {}
+    }
+    for p in st.session_state.project_names:
+        all_projects_payload["projects_data"][p] = {
+            "input_df": st.session_state.get(f"input_df_{p}", get_default_input()).to_dict(orient="records"),
+            "ltv_df": st.session_state.get(f"ltv_df_{p}", get_default_ltv()).to_dict(orient="records"),
+            "params": st.session_state.get(f"params_{p}", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
+        }
+
+    payload = {
+        "project_name": cur_proj,
+        "traffic_plan": traffic_rows,
+        "ltv_plan": ltv_rows,
+        "pnl_rows": pnl_rows,
+        "all_projects_payload": all_projects_payload
+    }
+    
+    return requests.post(GOOGLE_SCRIPT_URL, data=json.dumps(payload), timeout=25)
 
 # ==========================================
 # TAB 3: BÁO CÁO P&L & HIỂN THỊ
@@ -399,19 +440,14 @@ with tab_report:
             total_mkt = res['Marketing (UA+Tax)'].sum()
             cpu_total = total_mkt / total_nru if total_nru > 0 else 0
             
-            # --- Nút đẩy sang Google Sheet ---
-            if col_btn2.button("☁️ Lưu Báo Cáo Vào Google Sheet"):
+            if col_btn2.button("☁️ Lưu Toàn Bộ Dữ Liệu Vào Google Sheet"):
                 try:
-                    matrix_data = prepare_pnl_matrix_for_sheet(res)
-                    payload = {
-                        "project_name": cur_proj,
-                        "rows": matrix_data
-                    }
-                    resp = requests.post(GOOGLE_SCRIPT_URL, data=json.dumps(payload), timeout=15)
-                    if resp.status_code == 200:
-                        st.success(f"🎉 Đã lưu thành công dự án '{cur_proj}' vào tab sheet riêng trên Google Spreadsheet!")
-                    else:
-                        st.error(f"Lỗi phản hồi từ Google Script: {resp.text}")
+                    with st.spinner("Đang lưu Input Traffic, LTV & Báo cáo P&L sang Google Spreadsheet..."):
+                        resp = export_all_to_google_sheet(cur_proj, edited_input_df, edited_ltv, res)
+                        if resp.status_code == 200:
+                            st.success(f"🎉 Đã lưu thành công toàn bộ Input & Output của '{cur_proj}' vào Google Sheet!")
+                        else:
+                            st.error(f"Lỗi kết nối Webhook: {resp.text}")
                 except Exception as ex:
                     st.error(f"Không thể kết nối Google Sheet: {ex}")
 
@@ -491,4 +527,4 @@ with tab_report:
             out_buffer.seek(0)
             st.download_button(f"📥 Tải File P&L - {cur_proj}", data=out_buffer, file_name=f"Game_Forecast_{cur_proj}.xlsx")
     else:
-        st.info("💡 Bấm nút **Chạy Mô Phỏng** để tính toán và lưu báo cáo vào Google Sheet.")
+        st.info("💡 Bấm nút **Chạy Mô Phỏng** sau đó bấm **Lưu Toàn Bộ Dữ Liệu Vào Google Sheet** để đồng bộ.")
