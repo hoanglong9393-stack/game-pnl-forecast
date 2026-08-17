@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
 
-st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
+st.title("🎮 P&L Tool by longht(VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -41,7 +41,7 @@ st.markdown("""
 # KHỞI TẠO DỮ LIỆU
 # ==========================================
 def get_default_traffic(total_months=25, is_android=True):
-    months_label = ["Pre-launch", "Month OB"] + [f"Month OB+{i}" for i in range(1, total_months - 1)]
+    months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, total_months - 1)]
     if is_android:
         return pd.DataFrame({
             "Tháng": months_label,
@@ -94,7 +94,7 @@ def get_default_ltv(is_android=True):
     if is_android:
         return pd.DataFrame({
             "Phase Name": ["Phase 1 (Tháng OB)", "Phase 2 (Tháng 2&3)", "Phase 3 (Tháng 4+)"],
-            "Áp dụng từ Tháng": ["Month OB", "Month OB+1", "Month OB+3"],
+            "Áp dụng từ Tháng": ["🔒 Month OB (Auto)", "Month OB+1", "Month OB+3"],
             "D1": [9000, 7000, 4500], "D3": [13500, 10500, 7000], "D7": [27000, 22000, 13000],
             "D14": [40000, 33000, 22000], "D30": [54000, 44000, 30000], "D60": [72000, 57000, 35000],
             "D90": [85000, 66000, 40000], "D180": [108000, 80000, 45000], "D210": [112000, 83000, 46000],
@@ -104,7 +104,7 @@ def get_default_ltv(is_android=True):
     else:
         return pd.DataFrame({
             "Phase Name": ["Phase 1 (Tháng OB)", "Phase 2 (Tháng 2&3)", "Phase 3 (Tháng 4+)"],
-            "Áp dụng từ Tháng": ["Month OB", "Month OB+1", "Month OB+3"],
+            "Áp dụng từ Tháng": ["🔒 Month OB (Auto)", "Month OB+1", "Month OB+3"],
             "D1": [12000, 10000, 6000], "D3": [18000, 15000, 10000], "D7": [36000, 31000, 19000],
             "D14": [55000, 48000, 31000], "D30": [72000, 62000, 45000], "D60": [96000, 81000, 50000],
             "D90": [115000, 93000, 55000], "D180": [144000, 110000, 60000], "D210": [150000, 113000, 61000],
@@ -112,10 +112,13 @@ def get_default_ltv(is_android=True):
             "D330": [174000, 125000, 65000], "D360": [180000, 128000, 66000]
         })
 
-# HÀM BÔI ĐỎ DÒNG MONTH OB
-def highlight_ob_row(row):
-    color = 'background-color: #FFCDD2; color: #B71C1C; font-weight: bold;' if row['Tháng'] == 'Month OB' else ''
-    return [color] * len(row)
+# Cập nhật tên tháng cũ thành tên mới khi Upload file Excel để không bị lỗi
+def migrate_month_ob(df):
+    if "Tháng" in df.columns:
+        df["Tháng"] = df["Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
+    if "Áp dụng từ Tháng" in df.columns:
+        df["Áp dụng từ Tháng"] = df["Áp dụng từ Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
+    return df
 
 if "project_names" not in st.session_state:
     st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
@@ -175,17 +178,17 @@ with st.sidebar:
                         st.session_state.project_names.append(imported_proj_name)
                     
                     if 'Traffic Android' in excel_data.sheet_names:
-                        st.session_state[f"traffic_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0)
+                        st.session_state[f"traffic_android_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0))
                     if 'Traffic iOS' in excel_data.sheet_names:
-                        st.session_state[f"traffic_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Traffic iOS').fillna(0)
+                        st.session_state[f"traffic_ios_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Traffic iOS').fillna(0))
                     if 'OB Daily Android' in excel_data.sheet_names:
                         st.session_state[f"ob_daily_adr_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='OB Daily Android').fillna(0)
                     if 'OB Daily iOS' in excel_data.sheet_names:
                         st.session_state[f"ob_daily_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='OB Daily iOS').fillna(0)
                     if 'LTV Android' in excel_data.sheet_names:
-                        st.session_state[f"ltv_android_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV Android').fillna(0)
+                        st.session_state[f"ltv_android_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='LTV Android').fillna(0))
                     if 'LTV iOS' in excel_data.sheet_names:
-                        st.session_state[f"ltv_ios_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='LTV iOS').fillna(0)
+                        st.session_state[f"ltv_ios_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='LTV iOS').fillna(0))
                     if 'Params' in excel_data.sheet_names:
                         p_df = pd.read_excel(excel_data, sheet_name='Params')
                         st.session_state[f"params_{imported_proj_name}"] = p_df.to_dict('records')[0]
@@ -241,7 +244,7 @@ ob_daily_budget_adr = float((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum()
 total_ob_nru_adr = int(np.round(ob_daily_nru_sum_adr + comeback_users_adr))
 calc_ob_cpn_adr = int(np.round(ob_daily_budget_adr / total_ob_nru_adr)) if total_ob_nru_adr > 0 else 0
 
-idx_ob_adr = current_tr_adr[current_tr_adr["Tháng"] == "Month OB"].index
+idx_ob_adr = current_tr_adr[current_tr_adr["Tháng"] == "🔒 Month OB (Auto)"].index
 if len(idx_ob_adr) > 0:
     current_tr_adr.loc[idx_ob_adr[0], "NRU"] = total_ob_nru_adr
     current_tr_adr.loc[idx_ob_adr[0], "CPN (VNĐ)"] = calc_ob_cpn_adr
@@ -259,7 +262,7 @@ ob_daily_budget_ios = float((ob_ios["NRU (Users)"] * ob_ios["CPN (VNĐ)"]).sum()
 total_ob_nru_ios = int(np.round(ob_daily_nru_sum_ios + comeback_users_ios))
 calc_ob_cpn_ios = int(np.round(ob_daily_budget_ios / total_ob_nru_ios)) if total_ob_nru_ios > 0 else 0
 
-idx_ob_ios = current_tr_ios[current_tr_ios["Tháng"] == "Month OB"].index
+idx_ob_ios = current_tr_ios[current_tr_ios["Tháng"] == "🔒 Month OB (Auto)"].index
 if len(idx_ob_ios) > 0:
     current_tr_ios.loc[idx_ob_ios[0], "NRU"] = total_ob_nru_ios
     current_tr_ios.loc[idx_ob_ios[0], "CPN (VNĐ)"] = calc_ob_cpn_ios
@@ -275,13 +278,10 @@ rendered_tabs = st.tabs(tabs_to_show)
 # TAB 1: ANDROID
 with rendered_tabs[0]:
     st.markdown(f'<div class="section-title">1. Kế Hoạch Traffic Tháng & Định Phí - ANDROID ({cur_proj})</div>', unsafe_allow_html=True)
-    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày (cộng thêm user comeback từ Pre-launch). Dòng màu đỏ bên dưới đã được tự động chốt.")
-    
-    df_adr = st.session_state[f"traffic_android_{cur_proj}"]
-    styled_adr = df_adr.style.apply(highlight_ob_row, axis=1)
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày (cộng thêm user comeback từ Pre-launch). Dòng có chữ `(Auto)` bên dưới đã được tự động chốt, bạn KHÔNG cần nhập số ở dòng này.")
     
     edited_tr_adr = st.data_editor(
-        styled_adr,
+        st.session_state[f"traffic_android_{cur_proj}"],
         num_rows="dynamic",
         use_container_width=True, hide_index=True, key=f"ed_tr_adr_{cur_proj}",
         column_config={
@@ -321,13 +321,10 @@ with rendered_tabs[0]:
 # TAB 2: IOS
 with rendered_tabs[1]:
     st.markdown(f'<div class="section-title">2. Kế Hoạch Traffic Tháng - iOS ({cur_proj})</div>', unsafe_allow_html=True)
-    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày. Dòng màu đỏ bên dưới đã được tự động chốt.")
-    
-    df_ios = st.session_state[f"traffic_ios_{cur_proj}"]
-    styled_ios = df_ios.style.apply(highlight_ob_row, axis=1)
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày. Dòng có chữ `(Auto)` bên dưới đã được tự động chốt, bạn KHÔNG cần nhập số ở dòng này.")
 
     edited_tr_ios = st.data_editor(
-        styled_ios,
+        st.session_state[f"traffic_ios_{cur_proj}"],
         num_rows="dynamic",
         use_container_width=True, hide_index=True, key=f"ed_tr_ios_{cur_proj}",
         column_config={
@@ -444,7 +441,7 @@ def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     
     for m_idx, row in df_traffic.iterrows():
         month_label = row['Tháng']
-        if month_label == "Month OB":
+        if month_label == "🔒 Month OB (Auto)":
             ob_nrus = df_ob_daily["NRU (Users)"].astype(float).values
             for d in range(30):
                 daily_nru_list.append(ob_nrus[d] if d < len(ob_nrus) else 0.0)
@@ -489,9 +486,11 @@ with rendered_tabs[4]:
     if run_sim or f"pnl_res_{cur_proj}" in st.session_state:
         with st.spinner("Đang tính ma trận Cohort hợp nhất..."):
             res = pd.DataFrame()
-            res['Tháng'] = tr_adr['Tháng']
             
-            # XỬ LÝ COMEBACK PRE-LAUNCH VÀO NGÀY 1 OB (Dành cho hàm LTV)
+            # Đổi lại tên cột hiển thị khi in ra báo cáo P&L (Bỏ icon khóa cho đẹp báo cáo)
+            display_months = tr_adr['Tháng'].replace("🔒 Month OB (Auto)", "Month OB").tolist()
+            res['Tháng'] = display_months
+            
             comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
             
             ob_adr_calc = ob_adr.copy()
@@ -504,7 +503,7 @@ with rendered_tabs[4]:
             
             nru_adr_list, mkt_adr_list = [], []
             for _, r in tr_adr.iterrows():
-                if r['Tháng'] == "Month OB":
+                if r['Tháng'] == "🔒 Month OB (Auto)":
                     nru_adr_list.append(ob_adr_calc["NRU (Users)"].sum())
                     mkt_adr_list.append((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum())
                 else:
@@ -514,7 +513,7 @@ with rendered_tabs[4]:
                     
             nru_ios_list, mkt_ios_list = [], []
             for _, r in tr_ios.iterrows():
-                if r['Tháng'] == "Month OB":
+                if r['Tháng'] == "🔒 Month OB (Auto)":
                     nru_ios_list.append(ob_ios_calc["NRU (Users)"].sum())
                     mkt_ios_list.append((ob_ios["NRU (Users)"] * ob_ios["CPN (VNĐ)"]).sum())
                 else:
@@ -529,9 +528,9 @@ with rendered_tabs[4]:
             rev_ios = calculate_platform_rev_phase_mapping(tr_ios, ob_ios_calc, ltv_ios)
             res['Revenue'] = rev_adr + rev_ios
             
-            res['Nhân sự (VNĐ)'] = pd.to_numeric(tr_adr['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0)
-            res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
-            res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
+            res['Nhân sự (VNĐ)'] = pd.to_numeric(tr_adr['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0).values
+            res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0).values
+            res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0).values
             
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
@@ -555,12 +554,24 @@ with rendered_tabs[4]:
             
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                tr_adr.to_excel(writer, sheet_name='Traffic Android', index=False)
-                tr_ios.to_excel(writer, sheet_name='Traffic iOS', index=False)
+                # Xóa icon trước khi xuất ra Excel cho đẹp
+                tr_adr_export = tr_adr.copy()
+                tr_adr_export["Tháng"] = tr_adr_export["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                tr_ios_export = tr_ios.copy()
+                tr_ios_export["Tháng"] = tr_ios_export["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                ltv_adr_export = ltv_adr.copy()
+                if "Áp dụng từ Tháng" in ltv_adr_export.columns:
+                    ltv_adr_export["Áp dụng từ Tháng"] = ltv_adr_export["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                ltv_ios_export = ltv_ios.copy()
+                if "Áp dụng từ Tháng" in ltv_ios_export.columns:
+                    ltv_ios_export["Áp dụng từ Tháng"] = ltv_ios_export["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                
+                tr_adr_export.to_excel(writer, sheet_name='Traffic Android', index=False)
+                tr_ios_export.to_excel(writer, sheet_name='Traffic iOS', index=False)
                 ob_adr.to_excel(writer, sheet_name='OB Daily Android', index=False)
                 ob_ios.to_excel(writer, sheet_name='OB Daily iOS', index=False)
-                ltv_adr.to_excel(writer, sheet_name='LTV Android', index=False)
-                ltv_ios.to_excel(writer, sheet_name='LTV iOS', index=False)
+                ltv_adr_export.to_excel(writer, sheet_name='LTV Android', index=False)
+                ltv_ios_export.to_excel(writer, sheet_name='LTV iOS', index=False)
                 pd.DataFrame([params]).to_excel(writer, sheet_name='Params', index=False)
             buffer.seek(0)
             
