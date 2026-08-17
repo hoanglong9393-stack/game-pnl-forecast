@@ -145,9 +145,7 @@ with st.sidebar:
     st.header("📤 Tải Lên Dữ Liệu (Excel)")
     uploaded_file = st.file_uploader("Upload file PNL_*.xlsx", type=["xlsx"])
     
-    # SỬA LỖI VÒNG LẶP VÀ ĐỌC SỐ
     if uploaded_file is not None:
-        # Kiểm tra xem file này đã được đọc ở lần chạy trước chưa (tránh infinite loop)
         if st.session_state.get("last_uploaded_file_id") != uploaded_file.file_id:
             with st.spinner("Đang đọc file Excel..."):
                 try:
@@ -173,7 +171,6 @@ with st.sidebar:
                         st.session_state[f"params_{imported_proj_name}"] = p_df.to_dict('records')[0]
                         
                     st.session_state.current_project = imported_proj_name
-                    # Lưu lại ID file để không đọc lại ở lần refresh tiếp theo
                     st.session_state["last_uploaded_file_id"] = uploaded_file.file_id
                     
                     st.success(f"Đã nạp thành công dự án '{imported_proj_name}' từ file Excel!")
@@ -417,7 +414,6 @@ with rendered_tabs[4]:
                     
             res['NRU'] = np.array(nru_adr_list) + np.array(nru_ios_list)
             res['Marketing (UA+Tax)'] = np.array(mkt_adr_list) + np.array(mkt_ios_list)
-            res['Cost per User'] = np.where(res['NRU'] > 0, res['Marketing (UA+Tax)'] / res['NRU'], 0.0)
             
             rev_adr = calculate_platform_rev_phase_mapping(tr_adr, ob_adr, ltv_adr)
             rev_ios = calculate_platform_rev_phase_mapping(tr_ios, ob_ios, ltv_ios)
@@ -426,9 +422,13 @@ with rendered_tabs[4]:
             res['Nhân sự (VNĐ)'] = pd.to_numeric(tr_adr['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0)
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
-            res['Revenue share dev'] = res['Revenue'] * (params['rev_share'] / 100.0)
-            res['VAT'] = res['Revenue'] * (params['vat'] / 100.0)
-            res['Payment channel fee'] = res['Revenue'] * (params['payment_fee'] / 100.0)
+            
+            # CẬP NHẬT CÔNG THỨC CPN = (Marketing + LF&Branding) / NRU
+            res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
+            
+            res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
+            res['VAT'] = res['Revenue'] * (params.get('vat', 10.0) / 100.0)
+            res['Payment channel fee'] = res['Revenue'] * (params.get('payment_fee', 5.0) / 100.0)
             
             res['Tổng Chi Phí'] = (
                 res['Marketing (UA+Tax)'] + res['Nhân sự (VNĐ)'] + res['Server (VNĐ)'] +
@@ -441,8 +441,10 @@ with rendered_tabs[4]:
             
             total_nru = res['NRU'].sum()
             total_mkt = res['Marketing (UA+Tax)'].sum()
-            cpu_total = total_mkt / total_nru if total_nru > 0 else 0
+            total_lf = res['LF + Branding (VNĐ)'].sum()
+            cpn_total = (total_mkt + total_lf) / total_nru if total_nru > 0 else 0
             
+            # XUẤT FILE EXCEL: CHỈ LƯU CÁC SHEET INPUT CỦA NGƯỜI DÙNG CHO NHẸ
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 tr_adr.to_excel(writer, sheet_name='Traffic Android', index=False)
@@ -452,11 +454,10 @@ with rendered_tabs[4]:
                 ltv_adr.to_excel(writer, sheet_name='LTV Android', index=False)
                 ltv_ios.to_excel(writer, sheet_name='LTV iOS', index=False)
                 pd.DataFrame([params]).to_excel(writer, sheet_name='Params', index=False)
-                res.to_excel(writer, sheet_name='P&L Tong Hop', index=False)
             buffer.seek(0)
             
             st.download_button(
-                label=f"📥 Tải File P&L Tổng - {cur_proj} (Gửi cho team)",
+                label=f"📥 Tải File Cấu Hình Input - {cur_proj} (Gửi cho team)",
                 data=buffer,
                 file_name=f"PNL_{cur_proj}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -476,8 +477,9 @@ with rendered_tabs[4]:
             for v in res['NRU']: html += f'<td>{format_cell_value(v)}</td>'
             html += '</tr>'
             
-            html += f'<tr class="row-cost"><td>Cost per User</td><td>{format_cell_value(cpu_total)}</td>'
-            for v in res['Cost per User']: html += f'<td>{format_cell_value(v)}</td>'
+            # HÀNG CPN (Marketing + LF / NRU)
+            html += f'<tr class="row-cost"><td>CPN</td><td>{format_cell_value(cpn_total)}</td>'
+            for v in res['CPN']: html += f'<td>{format_cell_value(v)}</td>'
             html += '</tr>'
             
             html += f'<tr class="row-rev-total"><td>Revenue</td><td>{format_cell_value(res["Revenue"].sum())}</td>'
