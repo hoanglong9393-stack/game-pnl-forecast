@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-st.title("🎮 Tool build P&L (VplayHN)")
+st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -137,17 +137,15 @@ with st.sidebar:
                 st.session_state[f"ob_daily_ios_{new_proj_name}"] = get_default_ob_daily(50000, 32000)
                 st.session_state[f"ltv_android_{new_proj_name}"] = get_default_ltv(True)
                 st.session_state[f"ltv_ios_{new_proj_name}"] = get_default_ltv(False)
-                st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0}
+                st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0}
                 st.session_state.current_project = new_proj_name
                 st.rerun()
 
-    # THÊM NÚT XÓA DỰ ÁN
     with st.expander("🗑️ Xóa Dự Án Hiện Tại"):
         if len(st.session_state.project_names) > 1:
             st.warning(f"Bạn có chắc chắn muốn xóa dữ liệu của dự án **{cur_proj}** khỏi máy?")
             if st.button("⚠️ Xác nhận Xóa", type="primary", use_container_width=True):
                 st.session_state.project_names.remove(cur_proj)
-                # Dọn dẹp sạch cache của dự án bị xóa cho nhẹ máy
                 keys_to_delete = [k for k in st.session_state.keys() if k.endswith(f"_{cur_proj}")]
                 for k in keys_to_delete:
                     del st.session_state[k]
@@ -196,14 +194,21 @@ with st.sidebar:
                     st.error(f"Lỗi đọc file Excel: {e}")
 
     st.markdown("---")
-    st.header("💸 Cấu Hình Chi Phí (%)")
+    st.header("⚙️ Cấu Hình Tham Số Chung")
     if f"params_{cur_proj}" not in st.session_state:
-        st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0}
+        st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0}
     p_params = st.session_state[f"params_{cur_proj}"]
     rev_share_pct = st.number_input("Revenue Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1)
     vat_pct = st.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5)
     payment_fee_pct = st.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5)
-    st.session_state[f"params_{cur_proj}"] = {"rev_share": rev_share_pct, "vat": vat_pct, "payment_fee": payment_fee_pct}
+    prelaunch_comeback_pct = st.number_input("Tỷ lệ Comeback Pre-launch (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0)
+    
+    st.session_state[f"params_{cur_proj}"] = {
+        "rev_share": rev_share_pct, 
+        "vat": vat_pct, 
+        "payment_fee": payment_fee_pct,
+        "prelaunch_comeback_pct": prelaunch_comeback_pct
+    }
 
 # State init
 if f"traffic_android_{cur_proj}" not in st.session_state: st.session_state[f"traffic_android_{cur_proj}"] = get_default_traffic(25, True)
@@ -400,7 +405,7 @@ with rendered_tabs[4]:
     ob_ios = st.session_state[f"ob_daily_ios_{cur_proj}"]
     ltv_adr = st.session_state[f"ltv_android_{cur_proj}"]
     ltv_ios = st.session_state[f"ltv_ios_{cur_proj}"]
-    params = st.session_state.get(f"params_{cur_proj}", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0})
+    params = st.session_state.get(f"params_{cur_proj}", {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0})
     
     run_sim = st.button(f"🚀 Chạy Mô Phỏng Tổng ({cur_proj})", type="primary")
     
@@ -409,10 +414,24 @@ with rendered_tabs[4]:
             res = pd.DataFrame()
             res['Tháng'] = tr_adr['Tháng']
             
+            # XỬ LÝ COMEBACK PRE-LAUNCH VÀO NGÀY 1 OB
+            pre_nru_adr = float(tr_adr.loc[tr_adr['Tháng'] == 'Pre-launch', 'NRU'].sum())
+            pre_nru_ios = float(tr_ios.loc[tr_ios['Tháng'] == 'Pre-launch', 'NRU'].sum())
+            comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
+            
+            ob_adr_calc = ob_adr.copy()
+            if len(ob_adr_calc) > 0:
+                ob_adr_calc.loc[0, "NRU (Users)"] += pre_nru_adr * comeback_rate
+                
+            ob_ios_calc = ob_ios.copy()
+            if len(ob_ios_calc) > 0:
+                ob_ios_calc.loc[0, "NRU (Users)"] += pre_nru_ios * comeback_rate
+            
             nru_adr_list, mkt_adr_list = [], []
             for _, r in tr_adr.iterrows():
                 if r['Tháng'] == "Month OB":
-                    nru_adr_list.append(ob_adr["NRU (Users)"].sum())
+                    nru_adr_list.append(ob_adr_calc["NRU (Users)"].sum())
+                    # Marketing cost chỉ tính trên user trả tiền của tháng OB (không tính user comeback)
                     mkt_adr_list.append((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum())
                 else:
                     u = float(r['NRU'])
@@ -422,7 +441,7 @@ with rendered_tabs[4]:
             nru_ios_list, mkt_ios_list = [], []
             for _, r in tr_ios.iterrows():
                 if r['Tháng'] == "Month OB":
-                    nru_ios_list.append(ob_ios["NRU (Users)"].sum())
+                    nru_ios_list.append(ob_ios_calc["NRU (Users)"].sum())
                     mkt_ios_list.append((ob_ios["NRU (Users)"] * ob_ios["CPN (VNĐ)"]).sum())
                 else:
                     u = float(r['NRU'])
@@ -432,8 +451,8 @@ with rendered_tabs[4]:
             res['NRU'] = np.array(nru_adr_list) + np.array(nru_ios_list)
             res['Marketing (UA+Tax)'] = np.array(mkt_adr_list) + np.array(mkt_ios_list)
             
-            rev_adr = calculate_platform_rev_phase_mapping(tr_adr, ob_adr, ltv_adr)
-            rev_ios = calculate_platform_rev_phase_mapping(tr_ios, ob_ios, ltv_ios)
+            rev_adr = calculate_platform_rev_phase_mapping(tr_adr, ob_adr_calc, ltv_adr)
+            rev_ios = calculate_platform_rev_phase_mapping(tr_ios, ob_ios_calc, ltv_ios)
             res['Revenue'] = rev_adr + rev_ios
             
             res['Nhân sự (VNĐ)'] = pd.to_numeric(tr_adr['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0)
