@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-st.title("🎮 P&L by longht(VplayHN)")
+st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -140,6 +140,23 @@ with st.sidebar:
                 st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0}
                 st.session_state.current_project = new_proj_name
                 st.rerun()
+
+    # THÊM NÚT XÓA DỰ ÁN
+    with st.expander("🗑️ Xóa Dự Án Hiện Tại"):
+        if len(st.session_state.project_names) > 1:
+            st.warning(f"Bạn có chắc chắn muốn xóa dữ liệu của dự án **{cur_proj}** khỏi máy?")
+            if st.button("⚠️ Xác nhận Xóa", type="primary", use_container_width=True):
+                st.session_state.project_names.remove(cur_proj)
+                # Dọn dẹp sạch cache của dự án bị xóa cho nhẹ máy
+                keys_to_delete = [k for k in st.session_state.keys() if k.endswith(f"_{cur_proj}")]
+                for k in keys_to_delete:
+                    del st.session_state[k]
+                
+                st.session_state.current_project = st.session_state.project_names[0]
+                st.success("Đã xóa dự án thành công!")
+                st.rerun()
+        else:
+            st.info("Không thể xóa dự án duy nhất còn lại trong hệ thống.")
 
     st.markdown("---")
     st.header("📤 Tải Lên Dữ Liệu (Excel)")
@@ -423,7 +440,6 @@ with rendered_tabs[4]:
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
             
-            # CẬP NHẬT CÔNG THỨC CPN = (Marketing + LF&Branding) / NRU
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
@@ -444,7 +460,6 @@ with rendered_tabs[4]:
             total_lf = res['LF + Branding (VNĐ)'].sum()
             cpn_total = (total_mkt + total_lf) / total_nru if total_nru > 0 else 0
             
-            # XUẤT FILE EXCEL: CHỈ LƯU CÁC SHEET INPUT CỦA NGƯỜI DÙNG CHO NHẸ
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 tr_adr.to_excel(writer, sheet_name='Traffic Android', index=False)
@@ -463,7 +478,6 @@ with rendered_tabs[4]:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
-            # HTML Table Render matching Excel formatting style
             html = '<div class="dataframe-container"><table class="custom-pnl">'
             html += '<tr><th>Dashboard</th><th>Total</th>'
             for m in res['Tháng']: html += f'<th>{m}</th>'
@@ -477,7 +491,6 @@ with rendered_tabs[4]:
             for v in res['NRU']: html += f'<td>{format_cell_value(v)}</td>'
             html += '</tr>'
             
-            # HÀNG CPN (Marketing + LF / NRU)
             html += f'<tr class="row-cost"><td>CPN</td><td>{format_cell_value(cpn_total)}</td>'
             for v in res['CPN']: html += f'<td>{format_cell_value(v)}</td>'
             html += '</tr>'
