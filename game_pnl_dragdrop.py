@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
 
-st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
+st.title("🎮 P&L tool by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -233,8 +233,8 @@ ob_adr = st.session_state[f"ob_daily_adr_{cur_proj}"]
 ob_daily_nru_sum_adr = float(ob_adr["NRU (Users)"].sum())
 ob_daily_budget_adr = float((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum())
 
-total_ob_nru_adr = ob_daily_nru_sum_adr + comeback_users_adr
-calc_ob_cpn_adr = ob_daily_budget_adr / total_ob_nru_adr if total_ob_nru_adr > 0 else 0
+total_ob_nru_adr = int(np.round(ob_daily_nru_sum_adr + comeback_users_adr))
+calc_ob_cpn_adr = int(np.round(ob_daily_budget_adr / total_ob_nru_adr)) if total_ob_nru_adr > 0 else 0
 
 idx_ob_adr = current_tr_adr[current_tr_adr["Tháng"] == "Month OB"].index
 if len(idx_ob_adr) > 0:
@@ -251,8 +251,8 @@ ob_ios = st.session_state[f"ob_daily_ios_{cur_proj}"]
 ob_daily_nru_sum_ios = float(ob_ios["NRU (Users)"].sum())
 ob_daily_budget_ios = float((ob_ios["NRU (Users)"] * ob_ios["CPN (VNĐ)"]).sum())
 
-total_ob_nru_ios = ob_daily_nru_sum_ios + comeback_users_ios
-calc_ob_cpn_ios = ob_daily_budget_ios / total_ob_nru_ios if total_ob_nru_ios > 0 else 0
+total_ob_nru_ios = int(np.round(ob_daily_nru_sum_ios + comeback_users_ios))
+calc_ob_cpn_ios = int(np.round(ob_daily_budget_ios / total_ob_nru_ios)) if total_ob_nru_ios > 0 else 0
 
 idx_ob_ios = current_tr_ios[current_tr_ios["Tháng"] == "Month OB"].index
 if len(idx_ob_ios) > 0:
@@ -285,7 +285,6 @@ with rendered_tabs[0]:
         }
     )
     
-    # Rerun nếu có sửa các dòng khác (Pre-launch, OB+1...) để update lại
     if not edited_tr_adr.astype(str).equals(st.session_state[f"traffic_android_{cur_proj}"].astype(str)):
         st.session_state[f"traffic_android_{cur_proj}"] = edited_tr_adr
         st.rerun()
@@ -492,7 +491,6 @@ with rendered_tabs[4]:
             for _, r in tr_adr.iterrows():
                 if r['Tháng'] == "Month OB":
                     nru_adr_list.append(ob_adr_calc["NRU (Users)"].sum())
-                    # Marketing cost chỉ tính trên user trả tiền của tháng OB (không tính user comeback)
                     mkt_adr_list.append((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum())
                 else:
                     u = float(r['NRU'])
@@ -520,7 +518,6 @@ with rendered_tabs[4]:
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
             
-            # CÔNG THỨC MỚI: CPN = (Marketing + LF&Branding) / NRU
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
