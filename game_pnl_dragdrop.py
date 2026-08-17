@@ -112,6 +112,11 @@ def get_default_ltv(is_android=True):
             "D330": [174000, 125000, 65000], "D360": [180000, 128000, 66000]
         })
 
+# HÀM BÔI ĐỎ DÒNG MONTH OB
+def highlight_ob_row(row):
+    color = 'background-color: #FFCDD2; color: #B71C1C; font-weight: bold;' if row['Tháng'] == 'Month OB' else ''
+    return [color] * len(row)
+
 if "project_names" not in st.session_state:
     st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
     st.session_state.current_project = "T037"
@@ -270,10 +275,13 @@ rendered_tabs = st.tabs(tabs_to_show)
 # TAB 1: ANDROID
 with rendered_tabs[0]:
     st.markdown(f'<div class="section-title">1. Kế Hoạch Traffic Tháng & Định Phí - ANDROID ({cur_proj})</div>', unsafe_allow_html=True)
-    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày (cộng thêm user comeback từ Pre-launch). Vui lòng không sửa tay ở dòng này.")
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày (cộng thêm user comeback từ Pre-launch). Dòng màu đỏ bên dưới đã được tự động chốt.")
+    
+    df_adr = st.session_state[f"traffic_android_{cur_proj}"]
+    styled_adr = df_adr.style.apply(highlight_ob_row, axis=1)
     
     edited_tr_adr = st.data_editor(
-        st.session_state[f"traffic_android_{cur_proj}"],
+        styled_adr,
         num_rows="dynamic",
         use_container_width=True, hide_index=True, key=f"ed_tr_adr_{cur_proj}",
         column_config={
@@ -313,10 +321,13 @@ with rendered_tabs[0]:
 # TAB 2: IOS
 with rendered_tabs[1]:
     st.markdown(f'<div class="section-title">2. Kế Hoạch Traffic Tháng - iOS ({cur_proj})</div>', unsafe_allow_html=True)
-    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày. Vui lòng không sửa tay ở dòng này.")
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày. Dòng màu đỏ bên dưới đã được tự động chốt.")
     
+    df_ios = st.session_state[f"traffic_ios_{cur_proj}"]
+    styled_ios = df_ios.style.apply(highlight_ob_row, axis=1)
+
     edited_tr_ios = st.data_editor(
-        st.session_state[f"traffic_ios_{cur_proj}"],
+        styled_ios,
         num_rows="dynamic",
         use_container_width=True, hide_index=True, key=f"ed_tr_ios_{cur_proj}",
         column_config={
@@ -362,10 +373,8 @@ with rendered_tabs[2]:
         use_container_width=True, hide_index=True, column_config=col_cfg_adr, key=f"ed_ltv_adr_{cur_proj}"
     )
     
-    # BẮT SỰ KIỆN PASTE VÀ ÉP LÀM MỚI NGAY
     if not edited_ltv_adr.astype(str).equals(st.session_state[f"ltv_android_{cur_proj}"].astype(str)):
         st.session_state[f"ltv_android_{cur_proj}"] = edited_ltv_adr
-        st.rerun()
         
     k_adr_df = edited_ltv_adr.copy()
     for c in ALL_D_COLS: k_adr_df[c] = pd.to_numeric(k_adr_df[c], errors="coerce").fillna(0.0)
@@ -386,10 +395,8 @@ with rendered_tabs[3]:
         use_container_width=True, hide_index=True, column_config=col_cfg_ios, key=f"ed_ltv_ios_{cur_proj}"
     )
     
-    # BẮT SỰ KIỆN PASTE VÀ ÉP LÀM MỚI NGAY
     if not edited_ltv_ios.astype(str).equals(st.session_state[f"ltv_ios_{cur_proj}"].astype(str)):
         st.session_state[f"ltv_ios_{cur_proj}"] = edited_ltv_ios
-        st.rerun()
         
     k_ios_df = edited_ltv_ios.copy()
     for c in ALL_D_COLS: k_ios_df[c] = pd.to_numeric(k_ios_df[c], errors="coerce").fillna(0.0)
@@ -526,7 +533,6 @@ with rendered_tabs[4]:
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
             
-            # CÔNG THỨC MỚI: CPN = (Marketing + LF&Branding) / NRU
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
