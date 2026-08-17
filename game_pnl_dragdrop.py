@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-st.title("🎮 P&L tool by Longht (VplayHN)")
+st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -45,8 +45,8 @@ def get_default_traffic(total_months=25, is_android=True):
     if is_android:
         return pd.DataFrame({
             "Tháng": months_label,
-            "NRU": [0, 100000] + [70000] * (total_months - 2),
-            "CPN (VNĐ)": [0, 25000] + [25000] * (total_months - 2),
+            "NRU": [10000, 100000] + [70000] * (total_months - 2),
+            "CPN (VNĐ)": [15000, 25000] + [25000] * (total_months - 2),
             "Nhân sự (VNĐ)": [400000000, 200000000] + [200000000] * (total_months - 2),
             "Server (VNĐ)": [0, 200000000] + [200000000] * (total_months - 2),
             "LF + Branding (VNĐ)": [675000000, 1800000000] + [50000000] * (total_months - 2)
@@ -54,8 +54,8 @@ def get_default_traffic(total_months=25, is_android=True):
     else:
         return pd.DataFrame({
             "Tháng": months_label,
-            "NRU": [0, 50000] + [30000] * (total_months - 2),
-            "CPN (VNĐ)": [0, 32000] + [32000] * (total_months - 2)
+            "NRU": [5000, 50000] + [30000] * (total_months - 2),
+            "CPN (VNĐ)": [20000, 32000] + [32000] * (total_months - 2)
         })
 
 def get_default_ob_daily(total_ob_nru, default_cpn):
@@ -162,7 +162,7 @@ with st.sidebar:
     
     if uploaded_file is not None:
         if st.session_state.get("last_uploaded_file_id") != uploaded_file.file_id:
-            with st.spinner("Đang đọc file Excel..."):
+            with st.spinner("Đang đọc file Excel an toàn..."):
                 try:
                     excel_data = pd.ExcelFile(uploaded_file)
                     imported_proj_name = uploaded_file.name.replace("PNL_", "").replace(".xlsx", "")
@@ -201,7 +201,9 @@ with st.sidebar:
     rev_share_pct = st.number_input("Revenue Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1)
     vat_pct = st.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5)
     payment_fee_pct = st.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5)
-    prelaunch_comeback_pct = st.number_input("Tỷ lệ Comeback Pre-launch (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0)
+    
+    st.markdown("👉 **Chỉ số User chuyển đổi (Comeback)**")
+    prelaunch_comeback_pct = st.number_input("Tỷ lệ Pre-launch quay lại ngày OB (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0)
     
     st.session_state[f"params_{cur_proj}"] = {
         "rev_share": rev_share_pct, 
@@ -219,6 +221,47 @@ if f"ltv_android_{cur_proj}" not in st.session_state: st.session_state[f"ltv_and
 if f"ltv_ios_{cur_proj}" not in st.session_state: st.session_state[f"ltv_ios_{cur_proj}"] = get_default_ltv(False)
 
 # ==========================================
+# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
+# ==========================================
+# 1. Android
+current_tr_adr = st.session_state[f"traffic_android_{cur_proj}"]
+pre_nru_adr = float(current_tr_adr.loc[current_tr_adr['Tháng'] == 'Pre-launch', 'NRU'].sum())
+comeback_rate = float(st.session_state[f"params_{cur_proj}"].get("prelaunch_comeback_pct", 60.0)) / 100.0
+comeback_users_adr = pre_nru_adr * comeback_rate
+
+ob_adr = st.session_state[f"ob_daily_adr_{cur_proj}"]
+ob_daily_nru_sum_adr = float(ob_adr["NRU (Users)"].sum())
+ob_daily_budget_adr = float((ob_adr["NRU (Users)"] * ob_adr["CPN (VNĐ)"]).sum())
+
+total_ob_nru_adr = ob_daily_nru_sum_adr + comeback_users_adr
+calc_ob_cpn_adr = ob_daily_budget_adr / total_ob_nru_adr if total_ob_nru_adr > 0 else 0
+
+idx_ob_adr = current_tr_adr[current_tr_adr["Tháng"] == "Month OB"].index
+if len(idx_ob_adr) > 0:
+    current_tr_adr.loc[idx_ob_adr[0], "NRU"] = total_ob_nru_adr
+    current_tr_adr.loc[idx_ob_adr[0], "CPN (VNĐ)"] = calc_ob_cpn_adr
+st.session_state[f"traffic_android_{cur_proj}"] = current_tr_adr
+
+# 2. iOS
+current_tr_ios = st.session_state[f"traffic_ios_{cur_proj}"]
+pre_nru_ios = float(current_tr_ios.loc[current_tr_ios['Tháng'] == 'Pre-launch', 'NRU'].sum())
+comeback_users_ios = pre_nru_ios * comeback_rate
+
+ob_ios = st.session_state[f"ob_daily_ios_{cur_proj}"]
+ob_daily_nru_sum_ios = float(ob_ios["NRU (Users)"].sum())
+ob_daily_budget_ios = float((ob_ios["NRU (Users)"] * ob_ios["CPN (VNĐ)"]).sum())
+
+total_ob_nru_ios = ob_daily_nru_sum_ios + comeback_users_ios
+calc_ob_cpn_ios = ob_daily_budget_ios / total_ob_nru_ios if total_ob_nru_ios > 0 else 0
+
+idx_ob_ios = current_tr_ios[current_tr_ios["Tháng"] == "Month OB"].index
+if len(idx_ob_ios) > 0:
+    current_tr_ios.loc[idx_ob_ios[0], "NRU"] = total_ob_nru_ios
+    current_tr_ios.loc[idx_ob_ios[0], "CPN (VNĐ)"] = calc_ob_cpn_ios
+st.session_state[f"traffic_ios_{cur_proj}"] = current_tr_ios
+
+
+# ==========================================
 # TABS HIỂN THỊ
 # ==========================================
 tabs_to_show = ["🤖 1. Traffic Android", "🍎 2. Traffic iOS", "📈 3. LTV Android", "🍏 4. LTV iOS", "📊 5. Báo Cáo P&L Tổng Hợp"]
@@ -227,6 +270,8 @@ rendered_tabs = st.tabs(tabs_to_show)
 # TAB 1: ANDROID
 with rendered_tabs[0]:
     st.markdown(f'<div class="section-title">1. Kế Hoạch Traffic Tháng & Định Phí - ANDROID ({cur_proj})</div>', unsafe_allow_html=True)
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày (cộng thêm user comeback từ Pre-launch). Vui lòng không sửa tay ở dòng này.")
+    
     edited_tr_adr = st.data_editor(
         st.session_state[f"traffic_android_{cur_proj}"],
         num_rows="dynamic",
@@ -239,27 +284,38 @@ with rendered_tabs[0]:
             "LF + Branding (VNĐ)": st.column_config.NumberColumn("LF + Branding (VNĐ)", format="%d", min_value=0)
         }
     )
-    st.session_state[f"traffic_android_{cur_proj}"] = edited_tr_adr
     
-    with st.expander("📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA (Android) - [Tùy Chỉnh Lệch Đầu / Launch Curve]", expanded=False):
-        st.caption("👉 Điền chính xác số lượng **NRU** và **CPN** cho từng ngày (Day 1 → Day 30) của tháng Open Beta.")
-        c1, c2, c3 = st.columns([1.5, 1.5, 3])
-        if c1.button("⚡ Phân bổ dồn đầu (50-20-30)", key="btn_apply_dist_adr"):
-            ob_total_target = float(edited_tr_adr.loc[edited_tr_adr["Tháng"] == "Month OB", "NRU"].values[0]) if "Month OB" in edited_tr_adr["Tháng"].values else 100000
-            ob_cpn_target = float(edited_tr_adr.loc[edited_tr_adr["Tháng"] == "Month OB", "CPN (VNĐ)"].values[0]) if "Month OB" in edited_tr_adr["Tháng"].values else 25000
-            st.session_state[f"ob_daily_adr_{cur_proj}"] = get_default_ob_daily(int(ob_total_target), int(ob_cpn_target))
-            st.rerun()
+    # Rerun nếu có sửa các dòng khác (Pre-launch, OB+1...) để update lại
+    if not edited_tr_adr.astype(str).equals(st.session_state[f"traffic_android_{cur_proj}"].astype(str)):
+        st.session_state[f"traffic_android_{cur_proj}"] = edited_tr_adr
+        st.rerun()
+    
+    with st.expander("📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA (Android) - [Sửa số tại đây]", expanded=False):
+        c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 2])
+        target_nru_adr = c1.number_input("Mục tiêu Tổng NRU mua:", value=int(ob_daily_nru_sum_adr) if ob_daily_nru_sum_adr > 0 else 100000, step=1000, key=f"tgt_nru_adr_{cur_proj}")
+        target_cpn_adr = c2.number_input("Mục tiêu CPN mua TB:", value=int(ob_daily_budget_adr/ob_daily_nru_sum_adr) if ob_daily_nru_sum_adr > 0 else 25000, step=1000, key=f"tgt_cpn_adr_{cur_proj}")
+        with c3:
+            st.write("")
+            st.write("")
+            if st.button("⚡ Chia mốc dồn đầu (50-20-30)", key="btn_apply_dist_adr"):
+                st.session_state[f"ob_daily_adr_{cur_proj}"] = get_default_ob_daily(target_nru_adr, target_cpn_adr)
+                st.rerun()
+                
         edited_ob_adr = st.data_editor(
             st.session_state[f"ob_daily_adr_{cur_proj}"],
             num_rows="fixed",
             use_container_width=True, hide_index=True, key=f"ed_ob_adr_{cur_proj}",
             column_config={"NRU (Users)": st.column_config.NumberColumn("NRU (Users)", format="%d", min_value=0), "CPN (VNĐ)": st.column_config.NumberColumn("CPN (VNĐ)", format="%d", min_value=0)}
         )
-        st.session_state[f"ob_daily_adr_{cur_proj}"] = edited_ob_adr
+        if not edited_ob_adr.astype(str).equals(st.session_state[f"ob_daily_adr_{cur_proj}"].astype(str)):
+            st.session_state[f"ob_daily_adr_{cur_proj}"] = edited_ob_adr
+            st.rerun()
 
 # TAB 2: IOS
 with rendered_tabs[1]:
     st.markdown(f'<div class="section-title">2. Kế Hoạch Traffic Tháng - iOS ({cur_proj})</div>', unsafe_allow_html=True)
+    st.info("🔒 **Lưu ý:** Số liệu NRU và CPN của `Month OB` được **tự động tính toán & đồng bộ** từ bảng phân bổ 30 ngày. Vui lòng không sửa tay ở dòng này.")
+    
     edited_tr_ios = st.data_editor(
         st.session_state[f"traffic_ios_{cur_proj}"],
         num_rows="dynamic",
@@ -269,23 +325,30 @@ with rendered_tabs[1]:
             "CPN (VNĐ)": st.column_config.NumberColumn("CPN iOS (VNĐ)", format="%d", min_value=0)
         }
     )
-    st.session_state[f"traffic_ios_{cur_proj}"] = edited_tr_ios
+    if not edited_tr_ios.astype(str).equals(st.session_state[f"traffic_ios_{cur_proj}"].astype(str)):
+        st.session_state[f"traffic_ios_{cur_proj}"] = edited_tr_ios
+        st.rerun()
     
-    with st.expander("📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA (iOS) - [Tùy Chỉnh Lệch Đầu / Launch Curve]", expanded=False):
-        st.caption("👉 Điền chính xác số lượng **NRU** và **CPN** cho từng ngày (Day 1 → Day 30) của tháng Open Beta cho hệ iOS.")
-        c1, c2, c3 = st.columns([1.5, 1.5, 3])
-        if c1.button("⚡ Phân bổ dồn đầu (50-20-30)", key="btn_apply_dist_ios"):
-            ob_total_target_ios = float(edited_tr_ios.loc[edited_tr_ios["Tháng"] == "Month OB", "NRU"].values[0]) if "Month OB" in edited_tr_ios["Tháng"].values else 50000
-            ob_cpn_target_ios = float(edited_tr_ios.loc[edited_tr_ios["Tháng"] == "Month OB", "CPN (VNĐ)"].values[0]) if "Month OB" in edited_tr_ios["Tháng"].values else 32000
-            st.session_state[f"ob_daily_ios_{cur_proj}"] = get_default_ob_daily(int(ob_total_target_ios), int(ob_cpn_target_ios))
-            st.rerun()
+    with st.expander("📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA (iOS) - [Sửa số tại đây]", expanded=False):
+        c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 2])
+        target_nru_ios = c1.number_input("Mục tiêu Tổng NRU mua:", value=int(ob_daily_nru_sum_ios) if ob_daily_nru_sum_ios > 0 else 50000, step=1000, key=f"tgt_nru_ios_{cur_proj}")
+        target_cpn_ios = c2.number_input("Mục tiêu CPN mua TB:", value=int(ob_daily_budget_ios/ob_daily_nru_sum_ios) if ob_daily_nru_sum_ios > 0 else 32000, step=1000, key=f"tgt_cpn_ios_{cur_proj}")
+        with c3:
+            st.write("")
+            st.write("")
+            if st.button("⚡ Chia mốc dồn đầu (50-20-30)", key="btn_apply_dist_ios"):
+                st.session_state[f"ob_daily_ios_{cur_proj}"] = get_default_ob_daily(target_nru_ios, target_cpn_ios)
+                st.rerun()
+                
         edited_ob_ios = st.data_editor(
             st.session_state[f"ob_daily_ios_{cur_proj}"],
             num_rows="fixed",
             use_container_width=True, hide_index=True, key=f"ed_ob_ios_{cur_proj}",
             column_config={"NRU (Users)": st.column_config.NumberColumn("NRU (Users)", format="%d", min_value=0), "CPN (VNĐ)": st.column_config.NumberColumn("CPN (VNĐ)", format="%d", min_value=0)}
         )
-        st.session_state[f"ob_daily_ios_{cur_proj}"] = edited_ob_ios
+        if not edited_ob_ios.astype(str).equals(st.session_state[f"ob_daily_ios_{cur_proj}"].astype(str)):
+            st.session_state[f"ob_daily_ios_{cur_proj}"] = edited_ob_ios
+            st.rerun()
 
 # TAB 3: LTV ANDROID
 with rendered_tabs[2]:
@@ -414,9 +477,7 @@ with rendered_tabs[4]:
             res = pd.DataFrame()
             res['Tháng'] = tr_adr['Tháng']
             
-            # XỬ LÝ COMEBACK PRE-LAUNCH VÀO NGÀY 1 OB
-            pre_nru_adr = float(tr_adr.loc[tr_adr['Tháng'] == 'Pre-launch', 'NRU'].sum())
-            pre_nru_ios = float(tr_ios.loc[tr_ios['Tháng'] == 'Pre-launch', 'NRU'].sum())
+            # XỬ LÝ COMEBACK PRE-LAUNCH VÀO NGÀY 1 OB (Dành cho hàm LTV)
             comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
             
             ob_adr_calc = ob_adr.copy()
@@ -459,6 +520,7 @@ with rendered_tabs[4]:
             res['Server (VNĐ)'] = pd.to_numeric(tr_adr['Server (VNĐ)'], errors='coerce').fillna(0.0)
             res['LF + Branding (VNĐ)'] = pd.to_numeric(tr_adr['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0)
             
+            # CÔNG THỨC MỚI: CPN = (Marketing + LF&Branding) / NRU
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding (VNĐ)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
