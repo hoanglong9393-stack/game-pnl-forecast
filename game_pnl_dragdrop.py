@@ -5,9 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import io
 
-st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
 
-st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
+st.title("🎮 P&L tool by Longht (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
