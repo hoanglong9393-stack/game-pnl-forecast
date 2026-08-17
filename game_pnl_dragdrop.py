@@ -10,6 +10,34 @@ st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layo
 st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
+# CUSTOM CSS FOR EXCEL-LIKE TABLE
+# ==========================================
+st.markdown("""
+<style>
+    .section-title { font-size: 18px; font-weight: 600; color: #1E293B; margin-top: 10px; margin-bottom: 8px; }
+    .dataframe-container { overflow-x: auto; margin-bottom: 20px; }
+    table.custom-pnl { width: 100%; border-collapse: collapse; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 13px; color: #E2E8F0; background-color: #0F172A; }
+    table.custom-pnl th { background-color: #0B3E45; color: white; font-weight: bold; text-align: center; padding: 8px 5px; border: 1px solid #1E293B; min-width: 100px; }
+    table.custom-pnl th:first-child { background-color: #002B36; text-align: left; min-width: 200px; position: sticky; left: 0; z-index: 10; }
+    table.custom-pnl td { padding: 6px 8px; text-align: right; border: 1px solid #334155; }
+    table.custom-pnl td:first-child { text-align: left; font-weight: 500; position: sticky; left: 0; background-color: #0F172A; z-index: 9; border-right: 2px solid #475569; }
+    
+    table.custom-pnl tr.row-nru td { background-color: #F59E0B; color: black; font-weight: bold; }
+    table.custom-pnl tr.row-cost td { background-color: #FBBF24; color: black; }
+    table.custom-pnl tr.row-rev-total td { background-color: #DC2626; color: white; font-weight: bold; }
+    table.custom-pnl tr.row-spent-header td { background-color: #94A3B8; color: black; font-weight: bold; text-align: left;}
+    table.custom-pnl tr.row-opex td { background-color: #FCD34D; color: black; }
+    table.custom-pnl tr.row-total-cost td { background-color: #DC2626; color: white; font-weight: bold; }
+    
+    table.custom-pnl tr.row-profit-month td { background-color: white; color: black; }
+    table.custom-pnl tr.row-profit-month td.positive { background-color: #22C55E; color: white; }
+    table.custom-pnl tr.row-profit-cum td { background-color: white; color: black; font-weight: bold; }
+    table.custom-pnl tr.row-profit-cum td.positive { background-color: #22C55E; color: white; }
+    table.custom-pnl tr.row-roi td { background-color: white; color: black; }
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
 # KHỞI TẠO DỮ LIỆU
 # ==========================================
 def get_default_traffic(total_months=25, is_android=True):
@@ -416,6 +444,7 @@ with rendered_tabs[4]:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
+            # HTML Table Render matching Excel formatting style
             html = '<div class="dataframe-container"><table class="custom-pnl">'
             html += '<tr><th>Dashboard</th><th>Total</th>'
             for m in res['Tháng']: html += f'<th>{m}</th>'
