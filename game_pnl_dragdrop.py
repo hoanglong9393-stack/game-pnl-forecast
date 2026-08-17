@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import io
+from openpyxl.styles import Font, PatternFill, Alignment
 
 st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
@@ -178,18 +179,16 @@ with st.sidebar:
             with st.spinner("Đang đọc file Excel & Tương thích ngược..."):
                 try:
                     excel_data = pd.ExcelFile(uploaded_file)
-                    imported_proj_name = uploaded_file.name.replace("PNL_", "").replace(".xlsx", "")
+                    imported_proj_name = uploaded_file.name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
                     if imported_proj_name not in st.session_state.project_names:
                         st.session_state.project_names.append(imported_proj_name)
                     
-                    # Quét tìm các nền tảng có trong file
                     found_plats = []
                     for sheet in excel_data.sheet_names:
                         if sheet.startswith("Traffic "): found_plats.append(sheet.replace("Traffic ", ""))
                     if not found_plats: found_plats = ["Android", "iOS"]
                     st.session_state[f"platforms_{imported_proj_name}"] = found_plats
                     
-                    # Tương thích ngược: Tách Fixed Costs từ file cũ nếu cần
                     if 'Fixed Costs' in excel_data.sheet_names:
                         st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Fixed Costs').fillna(0))
                     elif 'Traffic Android' in excel_data.sheet_names:
@@ -249,7 +248,7 @@ for p in current_platforms:
     if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
 
 # ==========================================
-# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY CHO TẤT CẢ NỀN TẢNG
+# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
 # ==========================================
 for p in current_platforms:
     current_tr = st.session_state[f"traffic_{p}_{cur_proj}"]
@@ -366,7 +365,7 @@ for idx, p in enumerate(current_platforms):
         st.dataframe(k_df[["Phase Name", "Áp dụng từ Tháng", "K1"] + [f'K{d}' for d in ALL_D_TARGETS]].style.format({f'K{d}': "{:.2f}x" for d in [1] + ALL_D_TARGETS}), use_container_width=True, hide_index=True)
 
 # ==========================================
-# ENGINE CALCULATION 
+# ENGINE CALCULATION & EXPORT HELPERS
 # ==========================================
 def create_daily_ltv_curve(anchor_points):
     days = sorted(anchor_points.keys())
@@ -431,6 +430,101 @@ def format_cell_value(val, is_pct=False, is_usd=False):
     if is_pct: return f"{val*100:.2f}%"
     if is_usd: return f"${val:,.2f}"
     return f"{val:,.0f}"
+
+def format_pnl_for_excel(res):
+    metrics = [
+        'NRU', 'CPN', 'Revenue', 
+        'Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding',
+        'Revenue share dev', 'VAT', 'Payment channel fee',
+        'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận', 'Tỷ Trọng MKT/REV'
+    ]
+    df_export = pd.DataFrame({"Dashboard": metrics})
+    
+    totals = []
+    for m in metrics:
+        if m == 'NRU': totals.append(res['NRU'].sum())
+        elif m == 'CPN': 
+            t_nru = res['NRU'].sum()
+            t_mkt = res['Marketing (UA+Tax)'].sum() + res['LF + Branding'].sum()
+            totals.append(t_mkt / t_nru if t_nru > 0 else 0)
+        elif m == 'Revenue': totals.append(res['Revenue'].sum())
+        elif m in ['Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí']:
+            totals.append(res[m].sum())
+        elif m == 'Lợi Nhuận': totals.append(res['Lợi Nhuận'].iloc[-1])
+        elif m == 'Tỷ Trọng MKT/REV': 
+            t_rev = res['Revenue'].sum()
+            t_mkt = res['Marketing (UA+Tax)'].sum()
+            totals.append(t_mkt / t_rev if t_rev > 0 else 0)
+        else: totals.append(None)
+        
+    df_export["Total"] = totals
+    for _, row in res.iterrows():
+        df_export[row['Tháng']] = [row.get(m, None) for m in metrics]
+        
+    df_with_kpi = pd.DataFrame([[""] + ["KPI"] * (len(df_export.columns) - 1)], columns=df_export.columns)
+    df_export = pd.concat([df_with_kpi, df_export], ignore_index=True)
+    return df_export
+
+def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df_vnd = format_pnl_for_excel(res_vnd)
+        df_usd = format_pnl_for_excel(res_usd)
+        
+        df_vnd.to_excel(writer, sheet_name='P&L Tổng Hợp (VNĐ)', index=False)
+        df_usd.to_excel(writer, sheet_name='P&L (USD)', index=False)
+        
+        for p in current_platforms:
+            tr = st.session_state[f"traffic_{p}_{cur_proj}"].copy()
+            tr["Tháng"] = tr["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+            ltv = st.session_state[f"ltv_{p}_{cur_proj}"].copy()
+            if "Áp dụng từ Tháng" in ltv.columns:
+                ltv["Áp dụng từ Tháng"] = ltv["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+            
+            tr.to_excel(writer, sheet_name=p, startrow=1, index=False)
+            ws = writer.sheets[p]
+            ws.cell(row=1, column=1, value=f"KẾ HOẠCH TRAFFIC - {p}").font = Font(bold=True)
+            
+            r_idx = len(tr) + 4
+            ws.cell(row=r_idx, column=1, value=f"CẤU HÌNH LTV - {p}").font = Font(bold=True)
+            ltv.to_excel(writer, sheet_name=p, startrow=r_idx, index=False)
+
+        # Định dạng Style Excel
+        for sheet_name in ['P&L Tổng Hợp (VNĐ)', 'P&L (USD)']:
+            ws = writer.book[sheet_name]
+            header_fill = PatternFill(start_color="0B3E45", end_color="0B3E45", fill_type="solid")
+            header_font = Font(color="FFFFFF", bold=True)
+            row_header_font = Font(bold=True)
+            
+            for cell in ws[1]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center")
+            
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+                row[0].font = row_header_font
+                for cell in row[1:]:
+                    if isinstance(cell.value, (int, float)):
+                        if "Tỷ Trọng" in str(row[0].value):
+                            cell.number_format = '0.00%'
+                        elif sheet_name == 'P&L (USD)':
+                            cell.number_format = '"$"#,##0.00'
+                        else:
+                            cell.number_format = '#,##0'
+
+        for sheet_name in writer.book.sheetnames:
+            ws = writer.book[sheet_name]
+            for col in ws.columns:
+                max_length = 0
+                col_letter = col[0].column_letter
+                for cell in col:
+                    try:
+                        if len(str(cell.value)) > max_length: max_length = len(str(cell.value))
+                    except: pass
+                ws.column_dimensions[col_letter].width = min(max_length + 3, 25)
+                
+    buffer.seek(0)
+    return buffer
 
 def generate_pnl_html(res, is_usd=False):
     total_nru = res['NRU'].sum()
@@ -522,7 +616,6 @@ with rendered_tabs[-1]:
                 ob_df = st.session_state[f"ob_daily_{p}_{cur_proj}"]
                 ltv_df = st.session_state[f"ltv_{p}_{cur_proj}"]
                 
-                # Tích hợp số Comeback vào ngày 1 của OB df logic
                 pre_nru = float(tr_df.loc[tr_df['Tháng'] == 'Pre-launch', 'NRU'].sum())
                 ob_calc = ob_df.copy()
                 if len(ob_calc) > 0:
@@ -564,10 +657,18 @@ with rendered_tabs[-1]:
             res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, res['Marketing (UA+Tax)'] / res['Revenue'], 0.0)
             st.session_state[f"pnl_res_{cur_proj}"] = res
             
-            # XUẤT EXCEL
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                # Xóa icon auto khi xuất Excel
+            # Khởi tạo DataFrame cho USD
+            res_usd = res.copy()
+            usd_rate = float(params.get('usd_rate', 25400.0))
+            monetary_cols = ['Marketing (UA+Tax)', 'Revenue', 'Nhân sự', 'Server', 'LF + Branding', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
+            for col in monetary_cols: res_usd[col] = res_usd[col] / usd_rate
+            
+            # TẠO GIAO DIỆN 2 NÚT TẢI XUỐNG
+            col_down1, col_down2 = st.columns(2)
+            
+            # NÚT 1: TẢI FILE CẤU HÌNH INPUT (DỮ LIỆU THÔ ĐỂ NẠP LẠI VÀO PHẦN MỀM)
+            buffer_input = io.BytesIO()
+            with pd.ExcelWriter(buffer_input, engine='openpyxl') as writer:
                 fc_export = fixed_costs.copy()
                 fc_export["Tháng"] = fc_export["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
                 fc_export.to_excel(writer, sheet_name='Fixed Costs', index=False)
@@ -583,20 +684,22 @@ with rendered_tabs[-1]:
                     st.session_state[f"ob_daily_{p}_{cur_proj}"].to_excel(writer, sheet_name=f'OB Daily {p}', index=False)
                     ltv_exp.to_excel(writer, sheet_name=f'LTV {p}', index=False)
                 pd.DataFrame([params]).to_excel(writer, sheet_name='Params', index=False)
-            buffer.seek(0)
+            buffer_input.seek(0)
             
-            st.download_button(
-                label=f"📥 Tải File Cấu Hình Input - {cur_proj} (Gửi cho team)", data=buffer,
-                file_name=f"PNL_{cur_proj}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            col_down1.download_button(
+                label=f"📥 Tải File Cấu Hình Input (Dùng để upload lại)", data=buffer_input,
+                file_name=f"PNL_{cur_proj}_Input.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
+            # NÚT 2: TẢI BÁO CÁO P&L (FORMAT ĐẸP ĐỂ XEM/BÁO CÁO SẾP)
+            buffer_report = generate_report_excel(res, res_usd, current_platforms, cur_proj)
+            col_down2.download_button(
+                label=f"📊 Tải Báo Cáo P&L & Cấu Hình (Excel)", data=buffer_report,
+                file_name=f"PNL_{cur_proj}_Report.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
             st.markdown("### 🇻🇳 Báo Cáo P&L (VNĐ)")
             st.markdown(generate_pnl_html(res, is_usd=False), unsafe_allow_html=True)
             
-            # BẢNG USD
-            st.markdown(f"### 🇺🇸 Báo Cáo P&L (USD) - *Tỷ giá: {params.get('usd_rate', 25400):,.0f} đ*")
-            res_usd = res.copy()
-            usd_rate = float(params.get('usd_rate', 25400.0))
-            monetary_cols = ['Marketing (UA+Tax)', 'Revenue', 'Nhân sự', 'Server', 'LF + Branding', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
-            for col in monetary_cols: res_usd[col] = res_usd[col] / usd_rate
+            st.markdown(f"### 🇺🇸 Báo Cáo P&L (USD) - *Tỷ giá: {usd_rate:,.0f} đ*")
             st.markdown(generate_pnl_html(res_usd, is_usd=True), unsafe_allow_html=True)
