@@ -14,7 +14,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 # CẤU HÌNH THƯ MỤC GOOGLE DRIVE CỦA TEAM (HARDCODE)
 # ==========================================
 # Ông hãy thay link thư mục Drive public của team vào giữa 2 dấu nháy kép dưới đây:
-TEAM_DRIVE_URL = "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive"
+TEAM_DRIVE_URL = "https://drive.google.com/drive/folders/1XvPdexOCJ7Pbkyz6J67eyYA7c_O8k0lV?usp=sharing"
 
 
 st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
