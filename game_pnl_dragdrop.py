@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 import io
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
 
-st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
+st.title("🎮 P&L Tool by longht(VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
