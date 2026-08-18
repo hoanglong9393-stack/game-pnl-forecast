@@ -25,6 +25,7 @@ st.markdown("""
     
     table.custom-pnl tr.row-nru td { background-color: #F59E0B; color: black; font-weight: bold; }
     table.custom-pnl tr.row-dau td { background-color: #D97706; color: white; font-weight: bold; }
+    table.custom-pnl tr.row-mau td { background-color: #EA580C; color: white; font-weight: bold; }
     table.custom-pnl tr.row-cost td { background-color: #FBBF24; color: black; }
     table.custom-pnl tr.row-rev-total td { background-color: #DC2626; color: white; font-weight: bold; }
     table.custom-pnl tr.row-spent-header td { background-color: #94A3B8; color: black; font-weight: bold; text-align: left;}
@@ -232,7 +233,6 @@ with st.sidebar:
                         if f'LTV {p}' in excel_data.sheet_names:
                             st.session_state[f"ltv_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'LTV {p}').fillna(0))
                         
-                        # Tương thích với RR
                         if f'RR {p}' in excel_data.sheet_names:
                             st.session_state[f"rr_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'RR {p}').fillna(0))
                         else:
@@ -481,7 +481,24 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
         for age in range(min(len(c_curve), total_days - c_day)):
             daily_dau[c_day + age] += c_nru * c_curve[age]
             
-    return np.array([np.mean(daily_dau[i*30:(i+1)*30]) for i in range(num_months)])
+    peak_dau_arr = np.array([np.max(daily_dau[i*30:(i+1)*30]) for i in range(num_months)])
+    
+    mau_arr = np.zeros(num_months)
+    for m in range(num_months):
+        nru_m = np.sum(daily_nru_list[m*30:(m+1)*30])
+        mau_m = nru_m
+        mid_month_day = m*30 + 15
+        for past_d in range(m*30):
+            c_nru = daily_nru_list[past_d]
+            if c_nru <= 0: continue
+            c_curve = daily_curve_list[past_d]
+            age = mid_month_day - past_d
+            if age < len(c_curve):
+                mr = min(c_curve[age] * 2.0, 1.0)
+                mau_m += c_nru * mr
+        mau_arr[m] = mau_m
+        
+    return peak_dau_arr, mau_arr
 
 def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     num_months = len(df_traffic)
@@ -536,7 +553,7 @@ def format_cell_value(val, is_pct=False, is_usd=False):
 
 def format_pnl_for_excel(res):
     metrics = [
-        'NRU', 'Average DAU', 'CPN', 'Revenue', 
+        'NRU', 'Peak DAU', 'MAU', 'CPN', 'Revenue', 
         'Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding',
         'Revenue share dev', 'VAT', 'Payment channel fee',
         'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận', 'Tỷ Trọng MKT/REV'
@@ -546,7 +563,8 @@ def format_pnl_for_excel(res):
     totals = []
     for m in metrics:
         if m == 'NRU': totals.append(res['NRU'].sum())
-        elif m == 'Average DAU': totals.append(np.mean(res['Average DAU']))
+        elif m == 'Peak DAU': totals.append(res['Peak DAU'].max())
+        elif m == 'MAU': totals.append(res['MAU'].max())
         elif m == 'CPN': 
             t_nru = res['NRU'].sum()
             t_mkt = res['Marketing (UA+Tax)'].sum() + res['LF + Branding'].sum()
@@ -606,6 +624,7 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
         fill_header = PatternFill(start_color="0B3E45", end_color="0B3E45", fill_type="solid")
         fill_nru = PatternFill(start_color="F59E0B", end_color="F59E0B", fill_type="solid")
         fill_dau = PatternFill(start_color="D97706", end_color="D97706", fill_type="solid")
+        fill_mau = PatternFill(start_color="EA580C", end_color="EA580C", fill_type="solid")
         fill_cpn = PatternFill(start_color="FBBF24", end_color="FBBF24", fill_type="solid")
         fill_rev_cost = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
         fill_spent = PatternFill(start_color="94A3B8", end_color="94A3B8", fill_type="solid")
@@ -637,8 +656,11 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                 if row_label == 'New Registed User':
                     current_fill = fill_nru
                     current_font = font_black_bold
-                elif row_label == 'Average DAU':
+                elif row_label == 'Peak DAU':
                     current_fill = fill_dau
+                    current_font = font_white_bold
+                elif row_label == 'MAU':
+                    current_fill = fill_mau
                     current_font = font_white_bold
                 elif row_label == 'CPN':
                     current_fill = fill_cpn
@@ -709,8 +731,12 @@ def generate_pnl_html(res, is_usd=False):
     for v in res['NRU']: html += f'<td>{format_cell_value(v)}</td>'
     html += '</tr>'
 
-    html += f'<tr class="row-dau"><td>Average DAU</td><td>{format_cell_value(res["Average DAU"].mean())}</td>'
-    for v in res['Average DAU']: html += f'<td>{format_cell_value(v)}</td>'
+    html += f'<tr class="row-dau"><td>Peak DAU</td><td>{format_cell_value(res["Peak DAU"].max())}</td>'
+    for v in res['Peak DAU']: html += f'<td>{format_cell_value(v)}</td>'
+    html += '</tr>'
+    
+    html += f'<tr class="row-mau"><td>MAU</td><td>{format_cell_value(res["MAU"].max())}</td>'
+    for v in res['MAU']: html += f'<td>{format_cell_value(v)}</td>'
     html += '</tr>'
     
     html += f'<tr class="row-cost"><td>CPN</td><td>{format_cell_value(cpn_total, is_usd=is_usd)}</td>'
@@ -775,7 +801,8 @@ with rendered_tabs[-1]:
             res['Tháng'] = display_months
             
             total_nru_arr = np.zeros(len(res))
-            total_dau_arr = np.zeros(len(res))
+            total_peak_dau_arr = np.zeros(len(res))
+            total_mau_arr = np.zeros(len(res))
             total_mkt_arr = np.zeros(len(res))
             total_rev_arr = np.zeros(len(res))
             comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
@@ -804,10 +831,14 @@ with rendered_tabs[-1]:
                 total_nru_arr += np.array(p_nru)
                 total_mkt_arr += np.array(p_mkt)
                 total_rev_arr += calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
-                total_dau_arr += calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
+                
+                p_peak_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
+                total_peak_dau_arr += p_peak_dau
+                total_mau_arr += p_mau
                 
             res['NRU'] = total_nru_arr
-            res['Average DAU'] = total_dau_arr
+            res['Peak DAU'] = total_peak_dau_arr
+            res['MAU'] = total_mau_arr
             res['Marketing (UA+Tax)'] = total_mkt_arr
             res['Revenue'] = total_rev_arr
             
