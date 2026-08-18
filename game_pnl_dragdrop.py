@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 import io
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-st.set_page_config(page_title="Game P&L Forecast", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
 
-st.title("🎮 P&L Tool by longht(VplayHN)")
+st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -39,6 +39,65 @@ st.markdown("""
     table.custom-pnl tr.row-roi td { background-color: white; color: black; }
 </style>
 """, unsafe_allow_html=True)
+
+# ==========================================
+# NỘI DUNG HƯỚNG DẪN & FAQ
+# ==========================================
+MANUAL_TEXT = """
+### 🛠️ PHẦN 1: HƯỚNG DẪN SỬ DỤNG (USER MANUAL)
+
+**Bước 1: Khởi tạo & Quản lý dự án**
+*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
+    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
+*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
+*   **Lưu & Khôi phục dữ liệu:** 
+    *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
+    *   *Khôi phục (Load):* Kéo thả file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu bên trái.
+
+**Bước 2: Cấu hình Tham số & Chi phí cố định**
+*   **Tham số chung (Sidebar):** Khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)**.
+*   **Tab 💸 Chi Phí Cố Định:** Nhập các khoản định phí (Không bị scale theo NRU) như: Quỹ lương nhân sự, Tiền Server, License Fee (LF) & Branding.
+
+**Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
+Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
+*   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
+    > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
+*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn để lên số cho 30 ngày đầu ra mắt:
+    1.  *Cách tự động:* Nhập **Tổng NRU** và **CPN trung bình** mục tiêu $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)** để tool rải đều số theo công thức chuẩn.
+    2.  *Cách thủ công:* Bạn hoàn toàn có thể **gõ tay (hoặc copy/paste từ Excel)** vào trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30) theo chiến thuật chạy Ads riêng của dự án.
+    *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
+
+**Bước 4: Thiết lập Retention Rate (RR) & LTV**
+*   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
+*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase để mô phỏng sự hạ nhiệt nạp thẻ ở các tháng server cũ.
+    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước (VD: D7 không bao giờ được phép nhỏ hơn D3).
+
+**Bước 5: Chạy mô phỏng & Xuất báo cáo**
+Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
+1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**. Hệ thống sẽ load ma trận Cohort và sinh ra P&L (Điểm hòa vốn được bôi xanh lá).
+2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo cuối cùng gửi sếp/đối tác.
+
+---
+
+### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
+
+**Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
+👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này tạo ra Doanh thu & DAU nhưng **không làm tăng thêm chi phí Marketing** của tháng OB (vì đã trả tiền mua từ tháng trước), giúp kéo CPN trung bình tháng OB xuống rất đẹp.
+
+**Q2: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
+👉 99% nguyên nhân là do bạn nhập sai quy tắc ở bảng **LTV**. Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu. Đảm bảo LTV luôn đi ngang hoặc tăng dần!
+
+**Q3: Peak DAU và MAU trong bảng P&L mang ý nghĩa gì? Kèm theo (Day X) là sao?**
+*   **Peak DAU:** Là số lượng người chơi đăng nhập hàng ngày (DAU) cao nhất đạt được trong tháng đó. Chữ `(Day X)` cho biết Peak DAU rơi đúng vào ngày thứ mấy của tháng (dùng để dự trù nâng cấp Server).
+*   **MAU (Monthly Active Users):** Tổng số lượng User duy nhất (Unique) vào game trong tháng (Bao gồm NRU mua mới + User cũ từ tháng trước quay lại theo tỷ lệ RR).
+
+**Q4: NRU giảm mạnh vào nửa cuối tháng OB, tại sao DAU vẫn cao hoặc lại tăng lên?**
+👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Dù lượng người mới bơm vào (NRU) giảm đi, nhưng lượng người cũ khổng lồ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm đó. 
+
+**Q5: Tại sao có đến 2 nút tải file Excel ở Tab Báo cáo?**
+*   **Nút 1 (Tải File Cấu Hình Input):** Xuất file Data thô, siêu nhẹ. Dùng để Backup dự án hoặc gửi cho team nạp lại (Upload) vào màn hình làm việc của Tool.
+*   **Nút 2 (Tải Báo Cáo P&L Format):** Xuất file Báo cáo chuẩn chỉnh. Tự động dàn trang, bôi màu Dashboard, chốt tỷ giá USD, đóng băng tiêu đề. Chuyên dùng để **Gửi thẳng cho Sếp hoặc Đối tác** (Không dùng file này để upload lại vào tool).
+"""
 
 # ==========================================
 # KHỞI TẠO DỮ LIỆU
@@ -136,6 +195,10 @@ if "project_names" not in st.session_state:
 # SIDEBAR QUẢN LÝ DỰ ÁN & NỀN TẢNG
 # ==========================================
 with st.sidebar:
+    # HIỂN THỊ FAQ Ở TRÊN CÙNG SIDEBAR THEO YÊU CẦU
+    with st.expander("📖 HƯỚNG DẪN & FAQ", expanded=False):
+        st.markdown(MANUAL_TEXT)
+        
     st.header("📁 Quản Lý Dự Án")
     selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
     st.session_state.current_project = selected_proj
@@ -180,9 +243,9 @@ with st.sidebar:
             st.info("Không thể xóa dự án duy nhất.")
 
     st.markdown("---")
-    st.header("📱 Quản Lý Nền Tảng (Sources)")
+    st.header("📱 Quản Lý Nền Tảng / Thị Trường")
     with st.expander("➕ Thêm Nền Tảng Mới"):
-        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Huawei):")
+        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Global):")
         if st.button("Thêm Nền Tảng"):
             if new_plat and new_plat not in current_platforms:
                 st.session_state[f"platforms_{cur_proj}"].append(new_plat)
@@ -288,7 +351,6 @@ for p in current_platforms:
     ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
     ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
 
-    # TÍNH NGẦM TRÊN FINAL P&L, HIỂN THỊ CHỈ HIỂN THỊ NRU MỚI KHÔNG CỘNG DỒN COMEBACK
     total_ob_nru = int(np.round(ob_daily_nru_sum))
     calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
 
@@ -301,11 +363,15 @@ for p in current_platforms:
 # ==========================================
 # TABS HIỂN THỊ CHÍNH
 # ==========================================
-tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
+tabs_names = ["📖 Hướng Dẫn & FAQ", "💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
 rendered_tabs = st.tabs(tabs_names)
 
-# TAB 0: CHI PHÍ CỐ ĐỊNH
+# TAB ĐẦU TIÊN: HƯỚNG DẪN & FAQ
 with rendered_tabs[0]:
+    st.markdown(MANUAL_TEXT)
+
+# TAB CHI PHÍ CỐ ĐỊNH
+with rendered_tabs[1]:
     st.markdown(f'<div class="section-title">💸 Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs) - {cur_proj}</div>', unsafe_allow_html=True)
     st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
     
@@ -326,9 +392,9 @@ with rendered_tabs[0]:
 
 # CÁC TAB NỀN TẢNG (TRAFFIC, RR & LTV)
 for idx, p in enumerate(current_platforms):
-    with rendered_tabs[idx + 1]:
+    with rendered_tabs[idx + 2]:
         col_title, col_btn = st.columns([4, 1])
-        col_title.markdown(f'<div class="section-title">Nền Tảng: {p} ({cur_proj})</div>', unsafe_allow_html=True)
+        col_title.markdown(f'<div class="section-title">Nền Tảng / Thị Trường: {p} ({cur_proj})</div>', unsafe_allow_html=True)
         if len(current_platforms) > 1:
             if col_btn.button(f"🗑️ Xóa {p}", key=f"del_{p}_{cur_proj}"):
                 st.session_state[f"platforms_{cur_proj}"].remove(p)
@@ -478,8 +544,6 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
         for age in range(min(len(c_curve), total_days - c_day)):
             daily_dau[c_day + age] += c_nru * c_curve[age]
             
-    peak_dau_arr = np.array([np.max(daily_dau[i*30:(i+1)*30]) for i in range(num_months)])
-    
     mau_arr = np.zeros(num_months)
     for m in range(num_months):
         nru_m = np.sum(daily_nru_list[m*30:(m+1)*30])
@@ -495,7 +559,7 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
                 mau_m += c_nru * mr
         mau_arr[m] = mau_m
         
-    return peak_dau_arr, mau_arr
+    return daily_dau, mau_arr
 
 def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     num_months = len(df_traffic)
@@ -544,6 +608,7 @@ def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
 
 def format_cell_value(val, is_pct=False, is_usd=False):
     if pd.isna(val) or val == 0: return "0"
+    if isinstance(val, str): return val
     if is_pct: return f"{val*100:.2f}%"
     if is_usd: return f"${val:,.2f}"
     return f"{val:,.0f}"
@@ -560,7 +625,7 @@ def format_pnl_for_excel(res):
     totals = []
     for m in metrics:
         if m == 'NRU': totals.append(res['NRU'].sum())
-        elif m == 'Peak DAU': totals.append(res['Peak DAU'].max())
+        elif m == 'Peak DAU': totals.append(res['Peak DAU Val'].max())
         elif m == 'MAU': totals.append(res['MAU'].max())
         elif m == 'CPN': 
             t_nru = res['NRU'].sum()
@@ -578,7 +643,15 @@ def format_pnl_for_excel(res):
         
     df_export["Total"] = totals
     for _, row in res.iterrows():
-        df_export[row['Tháng']] = [row.get(m, None) for m in metrics]
+        vals = []
+        for m in metrics:
+            if m == 'Peak DAU':
+                v = row.get('Peak DAU Val', 0)
+                d = row.get('Peak DAU Day', 0)
+                vals.append(f"{v:,.0f}\n(Day {int(d)})" if v > 0 else "0")
+            else:
+                vals.append(row.get(m, None))
+        df_export[row['Tháng']] = vals
         
     df_with_kpi = pd.DataFrame([[""] + ["KPI"] * (len(df_export.columns) - 1)], columns=df_export.columns)
     df_export = pd.concat([df_with_kpi, df_export], ignore_index=True)
@@ -687,6 +760,12 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                     
                     ws.freeze_panes = 'C3'
                     
+                    if idx == 0:
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                    else:
+                        wrap = True if row_label == 'Peak DAU' else False
+                        cell.alignment = Alignment(horizontal="right", vertical="center", wrap_text=wrap)
+                    
                     if idx > 0 and isinstance(cell.value, (int, float)):
                         if "Tỷ Trọng" in row_label:
                             cell.number_format = '0.00%'
@@ -728,8 +807,12 @@ def generate_pnl_html(res, is_usd=False):
     for v in res['NRU']: html += f'<td>{format_cell_value(v)}</td>'
     html += '</tr>'
 
-    html += f'<tr class="row-dau"><td>Peak DAU</td><td>{format_cell_value(res["Peak DAU"].max())}</td>'
-    for v in res['Peak DAU']: html += f'<td>{format_cell_value(v)}</td>'
+    html += f'<tr class="row-dau"><td>Peak DAU</td><td>{format_cell_value(res["Peak DAU Val"].max())}</td>'
+    for v, d in zip(res['Peak DAU Val'], res['Peak DAU Day']): 
+        if v > 0:
+            html += f'<td>{v:,.0f}<br><span style="font-size:11px; font-weight:normal">(Day {int(d)})</span></td>'
+        else:
+            html += f'<td>0</td>'
     html += '</tr>'
     
     html += f'<tr class="row-mau"><td>MAU</td><td>{format_cell_value(res["MAU"].max())}</td>'
@@ -798,7 +881,7 @@ with rendered_tabs[-1]:
             res['Tháng'] = display_months
             
             total_nru_arr = np.zeros(len(res))
-            total_peak_dau_arr = np.zeros(len(res))
+            global_daily_dau = np.zeros(len(res) * 30)
             total_mau_arr = np.zeros(len(res))
             total_mkt_arr = np.zeros(len(res))
             total_rev_arr = np.zeros(len(res))
@@ -829,12 +912,21 @@ with rendered_tabs[-1]:
                 total_mkt_arr += np.array(p_mkt)
                 total_rev_arr += calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
                 
-                p_peak_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
-                total_peak_dau_arr += p_peak_dau
+                p_daily_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
+                global_daily_dau += p_daily_dau
                 total_mau_arr += p_mau
                 
             res['NRU'] = total_nru_arr
-            res['Peak DAU'] = total_peak_dau_arr
+            
+            peak_dau_vals = []
+            peak_dau_days = []
+            for i in range(len(res)):
+                m_dau = global_daily_dau[i*30:(i+1)*30]
+                peak_dau_vals.append(np.max(m_dau))
+                peak_dau_days.append(np.argmax(m_dau) + 1)
+                
+            res['Peak DAU Val'] = peak_dau_vals
+            res['Peak DAU Day'] = peak_dau_days
             res['MAU'] = total_mau_arr
             res['Marketing (UA+Tax)'] = total_mkt_arr
             res['Revenue'] = total_rev_arr
