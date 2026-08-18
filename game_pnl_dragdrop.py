@@ -85,7 +85,7 @@ Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
 **Bước 6: So sánh với Kho Dự án mẫu (Benchmark)**
 Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể:
 1. Tải về file Template Mẫu để nhập số thực tế của các dự án đã phát hành.
-2. Tải ngược file đó lên để thêm vào Kho dữ liệu.
+2. Nạp ngược file đó lên để thêm vào Kho dữ liệu (Hệ thống tự động nhận diện các file tên bắt đầu bằng `REAL_`).
 3. Tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại, giúp bạn đánh giá tính khả thi cực kỳ trực quan.
 
 ---
@@ -106,7 +106,7 @@ Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể:
 👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Dù lượng người mới bơm vào (NRU) giảm đi, nhưng lượng người cũ khổng lồ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm đó. 
 
 **Q5: Tại sao có đến 2 nút tải file Excel ở Tab Báo cáo?**
-*   **Nút 1 (Tải File Cấu Hình Input):** Xuất file Data thô, siêu nhẹ. Dùng để Backup dự án hoặc chia sẻ vào Thư mục dùng chung.
+*   **Nút 1 (Tải File Cấu Hình Input):** Xuất file Data thô, siêu nhẹ. Dùng để Backup dự án hoặc chia sẻ vào Thư mục dùng chung. File tự động lưu với định dạng `PNL_xxxx_INPUT.xlsx`.
 *   **Nút 2 (Tải Báo Cáo P&L Format):** Xuất file Báo cáo chuẩn chỉnh. Tự động dàn trang, bôi màu Dashboard, chốt tỷ giá USD, đóng băng tiêu đề. Chuyên dùng để **Gửi thẳng cho Sếp hoặc Đối tác** (Không dùng file này để upload lại vào tool).
 """
 
@@ -225,6 +225,7 @@ def migrate_month_ob(df):
         df["Áp dụng từ Tháng"] = df["Áp dụng từ Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
     return df
 
+# HÀM LÕI LOAD DATA DỰ PHÓNG
 def load_project_from_excel(excel_data, imported_proj_name):
     found_plats = []
     for sheet in excel_data.sheet_names:
@@ -260,45 +261,60 @@ def load_project_from_excel(excel_data, imported_proj_name):
     if 'Params' in excel_data.sheet_names:
         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
 
+# HÀM LÕI LOAD DATA THỰC TẾ (BENCHMARK)
+def load_sample_project(excel_data, sample_name):
+    st.session_state.sample_projects[sample_name] = {
+        "Monthly Revenue": pd.read_excel(excel_data, sheet_name="Monthly Revenue").fillna(0),
+        "LTV": pd.read_excel(excel_data, sheet_name="LTV").fillna(0),
+        "RR": pd.read_excel(excel_data, sheet_name="RR").fillna(0)
+    }
+
+# HÀM ĐỒNG BỘ TỪ GOOGLE DRIVE
 @st.dialog("🔄 Đang đồng bộ từ Google Drive...", width="large")
 def sync_from_drive(folder_url):
     try:
         import gdown
     except ImportError:
         st.error("⚠️ Hệ thống chưa được cài đặt thư viện 'gdown'.")
-        st.info("Để sử dụng tính năng này, vui lòng mở Terminal/CMD và gõ lệnh: `pip install gdown`")
+        st.info("Vui lòng mở Terminal/CMD và gõ lệnh: `pip install gdown`")
         return
 
     temp_dir = "temp_drive_sync_data"
     if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
 
-    st.write("⏳ Đang kết nối và tải toàn bộ file trong thư mục. Vui lòng không đóng cửa sổ này...")
+    st.write("⏳ Đang kết nối và tải toàn bộ file trong thư mục...")
     try:
         gdown.download_folder(url=folder_url, output=temp_dir, quiet=False, use_cookies=False)
         excel_files = glob.glob(f"{temp_dir}/*.xlsx")
+        
         if not excel_files:
             st.error("❌ Không tìm thấy file .xlsx nào trong thư mục. (Hoặc Thư mục Drive chưa bật Share Public).")
             return
 
-        success_count = 0
+        success_pnl = 0
+        success_real = 0
         for filepath in excel_files:
             file_name = os.path.basename(filepath)
-            imported_proj_name = file_name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
-
-            if imported_proj_name not in st.session_state.project_names:
-                st.session_state.project_names.append(imported_proj_name)
-
             try:
                 excel_data = pd.ExcelFile(filepath)
-                load_project_from_excel(excel_data, imported_proj_name)
-                success_count += 1
+                # PHÂN LOẠI FILE TỰ ĐỘNG THEO TIỀN TỐ
+                if file_name.startswith("REAL_"):
+                    sample_name = file_name.replace("REAL_", "").replace("_INPUT", "").replace(".xlsx", "")
+                    load_sample_project(excel_data, sample_name)
+                    success_real += 1
+                else: # Mặc định coi là PNL Input
+                    imported_proj_name = file_name.replace("PNL_", "").replace("_INPUT", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
+                    if imported_proj_name not in st.session_state.project_names:
+                        st.session_state.project_names.append(imported_proj_name)
+                    load_project_from_excel(excel_data, imported_proj_name)
+                    success_pnl += 1
             except Exception as e:
                 st.warning(f"Lỗi đọc file {file_name}: {e}")
 
-        if success_count > 0:
-            st.session_state.current_project = st.session_state.project_names[-1]
-            st.success(f"🎉 Nạp thành công {success_count} dự án! Hệ thống đang tải lại...")
+        if success_pnl > 0 or success_real > 0:
+            if success_pnl > 0: st.session_state.current_project = st.session_state.project_names[-1]
+            st.success(f"🎉 Đồng bộ thành công: {success_pnl} Dự phóng Kế hoạch | {success_real} Kho mẫu Thực tế!")
             time.sleep(2)
             st.rerun()
 
@@ -313,7 +329,7 @@ if "project_names" not in st.session_state:
     st.session_state.current_project = "T037"
 
 # ==========================================
-# SIDEBAR QUẢN LÝ DỰ ÁN & NỀN TẢNG
+# SIDEBAR: QUẢN LÝ DỰ ÁN & DATA HUB
 # ==========================================
 with st.sidebar:
     st.markdown("### 💁‍♂️ Trợ giúp")
@@ -329,7 +345,6 @@ with st.sidebar:
     
     if f"platforms_{cur_proj}" not in st.session_state:
         st.session_state[f"platforms_{cur_proj}"] = ["Android", "iOS"]
-        
     current_platforms = st.session_state[f"platforms_{cur_proj}"]
     
     with st.expander("➕ Tạo Dự Án Mới"):
@@ -381,38 +396,49 @@ with st.sidebar:
                 st.rerun()
 
     st.markdown("---")
-    st.header("📤 Tải Lên Từ Máy Tính")
-    uploaded_files = st.file_uploader("Kéo thả 1 HOẶC NHIỀU file PNL_*.xlsx", type=["xlsx"], accept_multiple_files=True)
+    st.header("📤 DATA HUB (Nạp Kế Hoạch & Thực Tế)")
+    st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx).")
     
+    st.download_button(
+        label="📥 Tải Template Nhập Số Thực Tế",
+        data=get_sample_template_excel(),
+        file_name="REAL_Template_INPUT.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+    
+    uploaded_files = st.file_uploader("Kéo thả NHIỀU file Excel:", type=["xlsx"], accept_multiple_files=True)
     if uploaded_files:
         current_file_names = [f.name for f in uploaded_files]
         if st.session_state.get("last_uploaded_files") != current_file_names:
-            with st.spinner(f"Đang nạp {len(uploaded_files)} dự án..."):
+            with st.spinner(f"Đang phân loại và nạp {len(uploaded_files)} file..."):
                 imported_last = None
                 for uploaded_file in uploaded_files:
+                    file_name = uploaded_file.name
                     try:
                         excel_data = pd.ExcelFile(uploaded_file)
-                        imported_proj_name = uploaded_file.name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
-                        if imported_proj_name not in st.session_state.project_names:
-                            st.session_state.project_names.append(imported_proj_name)
-                        
-                        load_project_from_excel(excel_data, imported_proj_name)
-                        imported_last = imported_proj_name
+                        if file_name.startswith("REAL_"):
+                            sample_name = file_name.replace("REAL_", "").replace("_INPUT", "").replace(".xlsx", "")
+                            load_sample_project(excel_data, sample_name)
+                        else:
+                            imported_proj_name = file_name.replace("PNL_", "").replace("_INPUT", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
+                            if imported_proj_name not in st.session_state.project_names:
+                                st.session_state.project_names.append(imported_proj_name)
+                            load_project_from_excel(excel_data, imported_proj_name)
+                            imported_last = imported_proj_name
                     except Exception as e:
-                        st.error(f"Lỗi đọc file {uploaded_file.name}: {e}")
+                        st.error(f"Lỗi đọc file {file_name}: {e}")
                 
                 st.session_state["last_uploaded_files"] = current_file_names
-                if imported_last:
-                    st.session_state.current_project = imported_last
-                    st.success(f"Đã nạp thành công {len(uploaded_files)} dự án!")
-                    time.sleep(1.5)
-                    st.rerun()
+                if imported_last: st.session_state.current_project = imported_last
+                st.success(f"Đã nạp xong {len(uploaded_files)} file!")
+                time.sleep(1.5)
+                st.rerun()
 
     st.markdown("---")
-    st.header("☁️ Đồng Bộ Từ Google Drive")
-    st.info("Tính năng hỗ trợ Team Work: Dán link Thư mục Drive chứa các file dự án dùng chung (Share Public) để tự động tải về Tool.")
-    drive_url = st.text_input("Link Thư mục Google Drive:")
-    if st.button("🔄 Nạp từ Google Drive", type="primary", use_container_width=True):
+    st.header("☁️ Đồng Bộ Folder Google Drive")
+    drive_url = st.text_input("Link Thư mục Google Drive (Share Public):")
+    if st.button("🔄 Bắt đầu Đồng Bộ", type="primary", use_container_width=True):
         if drive_url:
             sync_from_drive(drive_url)
         else:
@@ -1069,7 +1095,7 @@ with rendered_tabs[-2]:
             
             col_down1.download_button(
                 label=f"📥 Tải File Cấu Hình Input (Dùng để upload lại)", data=buffer_input,
-                file_name=f"PNL_{cur_proj}_Input.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                file_name=f"PNL_{cur_proj}_INPUT.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
             buffer_report = generate_report_excel(res, res_usd, current_platforms, cur_proj)
@@ -1090,28 +1116,7 @@ with rendered_tabs[-1]:
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.info("Tính năng này giúp bạn so sánh biểu đồ Kế hoạch hiện tại với các Dự án thực tế trong quá khứ.")
-        st.download_button(
-            label="📥 Tải File Template Mẫu (Nhập số liệu thực tế)",
-            data=get_sample_template_excel(),
-            file_name="Template_Du_An_Mau_Benchmark.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-        
-        uploaded_sample = st.file_uploader("Nạp Dự án mẫu (Từ file Template):", type=["xlsx"], key="sample_uploader")
-        if uploaded_sample:
-            try:
-                sample_name = uploaded_sample.name.replace(".xlsx", "")
-                sample_xls = pd.ExcelFile(uploaded_sample)
-                st.session_state.sample_projects[sample_name] = {
-                    "Monthly Revenue": pd.read_excel(sample_xls, sheet_name="Monthly Revenue").fillna(0),
-                    "LTV": pd.read_excel(sample_xls, sheet_name="LTV").fillna(0),
-                    "RR": pd.read_excel(sample_xls, sheet_name="RR").fillna(0)
-                }
-                st.success(f"Đã nạp kho mẫu: {sample_name}")
-            except Exception as e:
-                st.error("File tải lên không đúng định dạng Template! Vui lòng tải Template mẫu về và nhập số.")
+        st.info("Mẹo: Bạn có thể tải nhiều file REAL_*.xlsx cùng lúc ở thanh Menu bên trái, hoặc đồng bộ cả thư mục Google Drive chứa các dự án thực tế.")
                 
     with col2:
         selected_samples = st.multiselect(
