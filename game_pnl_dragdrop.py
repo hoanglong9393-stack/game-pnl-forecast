@@ -4,11 +4,15 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import io
+import os
+import glob
+import shutil
+import time
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
 
-st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
+st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -41,7 +45,71 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# KHỞI TẠO DỮ LIỆU
+# NỘI DUNG HƯỚNG DẪN & FAQ
+# ==========================================
+MANUAL_TEXT = """
+### 🛠️ PHẦN 1: HƯỚNG DẪN SỬ DỤNG (USER MANUAL)
+
+**Bước 1: Khởi tạo & Quản lý dự án**
+*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
+    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
+*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
+*   **Lưu & Khôi phục dữ liệu:** 
+    *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
+    *   *Khôi phục từ máy tính:* Kéo thả một hoặc NHIỀU file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu.
+    *   *Khôi phục từ Google Drive:* Dán link Thư mục dùng chung chứa các dự án để tải toàn bộ về trong 1 nút bấm.
+
+**Bước 2: Cấu hình Tham số & Chi phí cố định**
+*   **Tham số chung (Sidebar):** Khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)**.
+*   **Tab 💸 Chi Phí Cố Định:** Nhập các khoản định phí (Không bị scale theo NRU) như: Quỹ lương nhân sự, Tiền Server, License Fee (LF) & Branding.
+
+**Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
+Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
+*   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
+    > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
+*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn để lên số cho 30 ngày đầu ra mắt:
+    1.  *Cách tự động:* Nhập **Tổng NRU** và **CPN trung bình** mục tiêu $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)** để tool rải đều số theo công thức chuẩn.
+    2.  *Cách thủ công:* Bạn hoàn toàn có thể **gõ tay (hoặc copy/paste từ Excel)** vào trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30) theo chiến thuật chạy Ads riêng của dự án.
+    *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
+
+**Bước 4: Thiết lập Retention Rate (RR) & LTV**
+*   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
+*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase để mô phỏng sự hạ nhiệt nạp thẻ ở các tháng server cũ.
+    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước (VD: D7 không bao giờ được phép nhỏ hơn D3).
+
+**Bước 5: Chạy mô phỏng & Xuất báo cáo**
+Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
+1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**. Hệ thống sẽ load ma trận Cohort và sinh ra P&L (Điểm hòa vốn được bôi xanh lá).
+2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo cuối cùng gửi sếp/đối tác.
+
+---
+
+### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
+
+**Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
+👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này tạo ra Doanh thu & DAU nhưng **không làm tăng thêm chi phí Marketing** của tháng OB (vì đã trả tiền mua từ tháng trước), giúp kéo CPN trung bình tháng OB xuống rất đẹp.
+
+**Q2: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
+👉 99% nguyên nhân là do bạn nhập sai quy tắc ở bảng **LTV**. Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu. Đảm bảo LTV luôn đi ngang hoặc tăng dần!
+
+**Q3: Peak DAU và MAU trong bảng P&L mang ý nghĩa gì?**
+*   **Peak DAU:** Là số lượng người chơi đăng nhập hàng ngày (DAU) cao nhất đạt được trong vòng 30 ngày của tháng đó.
+*   **MAU (Monthly Active Users):** Tổng số lượng User duy nhất (Unique) vào game trong tháng (Bao gồm NRU mua mới + User cũ từ tháng trước quay lại theo tỷ lệ RR).
+
+**Q4: NRU giảm mạnh vào nửa cuối tháng OB, tại sao DAU vẫn cao hoặc lại tăng lên?**
+👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Dù lượng người mới bơm vào (NRU) giảm đi, nhưng lượng người cũ khổng lồ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm đó. 
+
+**Q5: Tại sao có đến 2 nút tải file Excel ở Tab Báo cáo?**
+*   **Nút 1 (Tải File Cấu Hình Input):** Xuất file Data thô, siêu nhẹ. Dùng để Backup dự án hoặc chia sẻ vào Thư mục dùng chung.
+*   **Nút 2 (Tải Báo Cáo P&L Format):** Xuất file Báo cáo chuẩn chỉnh. Tự động dàn trang, bôi màu Dashboard, chốt tỷ giá USD, đóng băng tiêu đề. Chuyên dùng để **Gửi thẳng cho Sếp hoặc Đối tác** (Không dùng file này để upload lại vào tool).
+"""
+
+@st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
+def show_manual_dialog():
+    st.markdown(MANUAL_TEXT)
+
+# ==========================================
+# KHỞI TẠO DỮ LIỆU & IMPORT EXCEL CORE
 # ==========================================
 def get_default_fixed_costs(total_months=25):
     months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, total_months - 1)]
@@ -128,6 +196,99 @@ def migrate_month_ob(df):
         df["Áp dụng từ Tháng"] = df["Áp dụng từ Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
     return df
 
+# HÀM LÕI LOAD DATA TỪ EXCEL VÀO SESSION STATE
+def load_project_from_excel(excel_data, imported_proj_name):
+    found_plats = []
+    for sheet in excel_data.sheet_names:
+        if sheet.startswith("Traffic "): found_plats.append(sheet.replace("Traffic ", ""))
+    if not found_plats: found_plats = ["Android", "iOS"]
+    st.session_state[f"platforms_{imported_proj_name}"] = found_plats
+    
+    if 'Fixed Costs' in excel_data.sheet_names:
+        st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Fixed Costs').fillna(0))
+    elif 'Traffic Android' in excel_data.sheet_names:
+        old_tr = pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0)
+        if "Nhân sự (VNĐ)" in old_tr.columns:
+            fc_cols = ["Tháng"] + [c for c in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"] if c in old_tr.columns]
+            st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(old_tr[fc_cols])
+        else:
+            st.session_state[f"fixed_costs_{imported_proj_name}"] = get_default_fixed_costs(len(old_tr))
+            
+    for p in found_plats:
+        if f'Traffic {p}' in excel_data.sheet_names:
+            tr_df = pd.read_excel(excel_data, sheet_name=f'Traffic {p}').fillna(0)
+            clean_cols = [c for c in tr_df.columns if c not in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"]]
+            st.session_state[f"traffic_{p}_{imported_proj_name}"] = migrate_month_ob(tr_df[clean_cols])
+        if f'OB Daily {p}' in excel_data.sheet_names:
+            st.session_state[f"ob_daily_{p}_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name=f'OB Daily {p}').fillna(0)
+        if f'LTV {p}' in excel_data.sheet_names:
+            st.session_state[f"ltv_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'LTV {p}').fillna(0))
+        
+        if f'RR {p}' in excel_data.sheet_names:
+            st.session_state[f"rr_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'RR {p}').fillna(0))
+        else:
+            st.session_state[f"rr_{p}_{imported_proj_name}"] = get_default_rr(p=="Android")
+            
+    if 'Params' in excel_data.sheet_names:
+        st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
+
+# HÀM ĐỒNG BỘ TỪ GOOGLE DRIVE
+@st.dialog("🔄 Đang đồng bộ từ Google Drive...", width="large")
+def sync_from_drive(folder_url):
+    try:
+        import gdown
+    except ImportError:
+        st.error("⚠️ Hệ thống chưa được cài đặt thư viện 'gdown'.")
+        st.info("Để sử dụng tính năng này, vui lòng mở Terminal/CMD và gõ lệnh: `pip install gdown`")
+        return
+
+    temp_dir = "temp_drive_sync_data"
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir)
+
+    st.write("⏳ Đang kết nối và tải toàn bộ file trong thư mục. Vui lòng không đóng cửa sổ này...")
+    
+    try:
+        # Tải folder public từ Google Drive
+        gdown.download_folder(url=folder_url, output=temp_dir, quiet=False, use_cookies=False)
+
+        excel_files = glob.glob(f"{temp_dir}/*.xlsx")
+        if not excel_files:
+            st.error("❌ Không tìm thấy file .xlsx nào trong thư mục. (Hoặc Thư mục Drive chưa bật Share Public).")
+            return
+
+        st.success(f"✅ Đã tải xong {len(excel_files)} file. Đang nạp vào hệ thống...")
+
+        success_count = 0
+        for filepath in excel_files:
+            file_name = os.path.basename(filepath)
+            imported_proj_name = file_name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
+
+            if imported_proj_name not in st.session_state.project_names:
+                st.session_state.project_names.append(imported_proj_name)
+
+            try:
+                excel_data = pd.ExcelFile(filepath)
+                load_project_from_excel(excel_data, imported_proj_name)
+                success_count += 1
+            except Exception as e:
+                st.warning(f"Lỗi đọc file {file_name}: {e}")
+
+        if success_count > 0:
+            st.session_state.current_project = st.session_state.project_names[-1]
+            st.success(f"🎉 Nạp thành công {success_count} dự án! Hệ thống đang tải lại...")
+            time.sleep(2)
+            st.rerun()
+
+    except Exception as e:
+        st.error(f"❌ Đồng bộ thất bại. Vui lòng kiểm tra lại Link Drive.")
+        st.info("LƯU Ý: Thư mục Drive phải được cấp quyền 'Bất kỳ ai có liên kết đều có thể xem' (Anyone with the link).")
+        st.code(str(e))
+    finally:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+
 if "project_names" not in st.session_state:
     st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
     st.session_state.current_project = "T037"
@@ -136,6 +297,12 @@ if "project_names" not in st.session_state:
 # SIDEBAR QUẢN LÝ DỰ ÁN & NỀN TẢNG
 # ==========================================
 with st.sidebar:
+    st.markdown("### 💁‍♂️ Trợ giúp")
+    if st.button("📖 Đọc Hướng Dẫn & FAQ", use_container_width=True, type="primary"):
+        show_manual_dialog()
+        
+    st.markdown("---")
+    
     st.header("📁 Quản Lý Dự Án")
     selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
     st.session_state.current_project = selected_proj
@@ -180,9 +347,9 @@ with st.sidebar:
             st.info("Không thể xóa dự án duy nhất.")
 
     st.markdown("---")
-    st.header("📱 Quản Lý Nền Tảng (Sources)")
+    st.header("📱 Quản Lý Nền Tảng / Thị Trường")
     with st.expander("➕ Thêm Nền Tảng Mới"):
-        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Huawei):")
+        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Global):")
         if st.button("Thêm Nền Tảng"):
             if new_plat and new_plat not in current_platforms:
                 st.session_state[f"platforms_{cur_proj}"].append(new_plat)
@@ -195,58 +362,42 @@ with st.sidebar:
                 st.rerun()
 
     st.markdown("---")
-    st.header("📤 Tải Lên Dữ Liệu (Excel)")
-    uploaded_file = st.file_uploader("Upload file PNL_*.xlsx", type=["xlsx"])
+    st.header("📤 Tải Lên Từ Máy Tính")
+    uploaded_files = st.file_uploader("Kéo thả 1 HOẶC NHIỀU file PNL_*.xlsx", type=["xlsx"], accept_multiple_files=True)
     
-    if uploaded_file is not None:
-        if st.session_state.get("last_uploaded_file_id") != uploaded_file.file_id:
-            with st.spinner("Đang đọc file Excel & Tương thích ngược..."):
-                try:
-                    excel_data = pd.ExcelFile(uploaded_file)
-                    imported_proj_name = uploaded_file.name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
-                    if imported_proj_name not in st.session_state.project_names:
-                        st.session_state.project_names.append(imported_proj_name)
-                    
-                    found_plats = []
-                    for sheet in excel_data.sheet_names:
-                        if sheet.startswith("Traffic "): found_plats.append(sheet.replace("Traffic ", ""))
-                    if not found_plats: found_plats = ["Android", "iOS"]
-                    st.session_state[f"platforms_{imported_proj_name}"] = found_plats
-                    
-                    if 'Fixed Costs' in excel_data.sheet_names:
-                        st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Fixed Costs').fillna(0))
-                    elif 'Traffic Android' in excel_data.sheet_names:
-                        old_tr = pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0)
-                        if "Nhân sự (VNĐ)" in old_tr.columns:
-                            fc_cols = ["Tháng"] + [c for c in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"] if c in old_tr.columns]
-                            st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(old_tr[fc_cols])
-                        else:
-                            st.session_state[f"fixed_costs_{imported_proj_name}"] = get_default_fixed_costs(len(old_tr))
-                            
-                    for p in found_plats:
-                        if f'Traffic {p}' in excel_data.sheet_names:
-                            tr_df = pd.read_excel(excel_data, sheet_name=f'Traffic {p}').fillna(0)
-                            clean_cols = [c for c in tr_df.columns if c not in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"]]
-                            st.session_state[f"traffic_{p}_{imported_proj_name}"] = migrate_month_ob(tr_df[clean_cols])
-                        if f'OB Daily {p}' in excel_data.sheet_names:
-                            st.session_state[f"ob_daily_{p}_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name=f'OB Daily {p}').fillna(0)
-                        if f'LTV {p}' in excel_data.sheet_names:
-                            st.session_state[f"ltv_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'LTV {p}').fillna(0))
+    if uploaded_files:
+        current_file_names = [f.name for f in uploaded_files]
+        if st.session_state.get("last_uploaded_files") != current_file_names:
+            with st.spinner(f"Đang nạp {len(uploaded_files)} dự án..."):
+                imported_last = None
+                for uploaded_file in uploaded_files:
+                    try:
+                        excel_data = pd.ExcelFile(uploaded_file)
+                        imported_proj_name = uploaded_file.name.replace("PNL_", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
+                        if imported_proj_name not in st.session_state.project_names:
+                            st.session_state.project_names.append(imported_proj_name)
                         
-                        if f'RR {p}' in excel_data.sheet_names:
-                            st.session_state[f"rr_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'RR {p}').fillna(0))
-                        else:
-                            st.session_state[f"rr_{p}_{imported_proj_name}"] = get_default_rr(p=="Android")
-                            
-                    if 'Params' in excel_data.sheet_names:
-                        st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
-                        
-                    st.session_state.current_project = imported_proj_name
-                    st.session_state["last_uploaded_file_id"] = uploaded_file.file_id
-                    st.success(f"Đã nạp thành công dự án '{imported_proj_name}'!")
+                        load_project_from_excel(excel_data, imported_proj_name)
+                        imported_last = imported_proj_name
+                    except Exception as e:
+                        st.error(f"Lỗi đọc file {uploaded_file.name}: {e}")
+                
+                st.session_state["last_uploaded_files"] = current_file_names
+                if imported_last:
+                    st.session_state.current_project = imported_last
+                    st.success(f"Đã nạp thành công {len(uploaded_files)} dự án!")
+                    time.sleep(1.5)
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Lỗi đọc file Excel: {e}")
+
+    st.markdown("---")
+    st.header("☁️ Đồng Bộ Từ Google Drive")
+    st.info("Tính năng hỗ trợ Team Work: Dán link Thư mục Drive chứa các file dự án dùng chung (Share Public) để tự động tải về Tool.")
+    drive_url = st.text_input("Link Thư mục Google Drive:")
+    if st.button("🔄 Nạp từ Google Drive", type="primary", use_container_width=True):
+        if drive_url:
+            sync_from_drive(drive_url)
+        else:
+            st.warning("Vui lòng nhập link Thư mục!")
 
     st.markdown("---")
     st.header("⚙️ Cấu Hình Tham Số Chung")
@@ -285,14 +436,10 @@ for p in current_platforms:
     ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
     params = st.session_state[f"params_{cur_proj}"]
 
-    pre_nru = float(current_tr.loc[current_tr['Tháng'] == 'Pre-launch', 'NRU'].sum())
-    comeback_rate = float(params.get("prelaunch_comeback_pct", 60.0)) / 100.0
-    comeback_users = pre_nru * comeback_rate
-
     ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
     ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
 
-    total_ob_nru = int(np.round(ob_daily_nru_sum + comeback_users))
+    total_ob_nru = int(np.round(ob_daily_nru_sum))
     calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
 
     idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
@@ -307,7 +454,7 @@ for p in current_platforms:
 tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
 rendered_tabs = st.tabs(tabs_names)
 
-# TAB 0: CHI PHÍ CỐ ĐỊNH
+# TAB CHI PHÍ CỐ ĐỊNH
 with rendered_tabs[0]:
     st.markdown(f'<div class="section-title">💸 Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs) - {cur_proj}</div>', unsafe_allow_html=True)
     st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
@@ -331,7 +478,7 @@ with rendered_tabs[0]:
 for idx, p in enumerate(current_platforms):
     with rendered_tabs[idx + 1]:
         col_title, col_btn = st.columns([4, 1])
-        col_title.markdown(f'<div class="section-title">Nền Tảng: {p} ({cur_proj})</div>', unsafe_allow_html=True)
+        col_title.markdown(f'<div class="section-title">Nền Tảng / Thị Trường: {p} ({cur_proj})</div>', unsafe_allow_html=True)
         if len(current_platforms) > 1:
             if col_btn.button(f"🗑️ Xóa {p}", key=f"del_{p}_{cur_proj}"):
                 st.session_state[f"platforms_{cur_proj}"].remove(p)
@@ -481,8 +628,6 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
         for age in range(min(len(c_curve), total_days - c_day)):
             daily_dau[c_day + age] += c_nru * c_curve[age]
             
-    peak_dau_arr = np.array([np.max(daily_dau[i*30:(i+1)*30]) for i in range(num_months)])
-    
     mau_arr = np.zeros(num_months)
     for m in range(num_months):
         nru_m = np.sum(daily_nru_list[m*30:(m+1)*30])
@@ -498,7 +643,7 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
                 mau_m += c_nru * mr
         mau_arr[m] = mau_m
         
-    return peak_dau_arr, mau_arr
+    return daily_dau, mau_arr
 
 def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     num_months = len(df_traffic)
@@ -547,6 +692,7 @@ def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
 
 def format_cell_value(val, is_pct=False, is_usd=False):
     if pd.isna(val) or val == 0: return "0"
+    if isinstance(val, str): return val
     if is_pct: return f"{val*100:.2f}%"
     if is_usd: return f"${val:,.2f}"
     return f"{val:,.0f}"
@@ -690,6 +836,11 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                     
                     ws.freeze_panes = 'C3'
                     
+                    if idx == 0:
+                        cell.alignment = Alignment(horizontal="left", vertical="center")
+                    else:
+                        cell.alignment = Alignment(horizontal="right", vertical="center")
+                    
                     if idx > 0 and isinstance(cell.value, (int, float)):
                         if "Tỷ Trọng" in row_label:
                             cell.number_format = '0.00%'
@@ -801,7 +952,7 @@ with rendered_tabs[-1]:
             res['Tháng'] = display_months
             
             total_nru_arr = np.zeros(len(res))
-            total_peak_dau_arr = np.zeros(len(res))
+            global_daily_dau = np.zeros(len(res) * 30)
             total_mau_arr = np.zeros(len(res))
             total_mkt_arr = np.zeros(len(res))
             total_rev_arr = np.zeros(len(res))
@@ -821,7 +972,7 @@ with rendered_tabs[-1]:
                 p_nru, p_mkt = [], []
                 for _, r in tr_df.iterrows():
                     if r['Tháng'] == "🔒 Month OB (Auto)":
-                        p_nru.append(ob_calc["NRU (Users)"].sum())
+                        p_nru.append(ob_df["NRU (Users)"].sum())
                         p_mkt.append((ob_df["NRU (Users)"] * ob_df["CPN (VNĐ)"]).sum())
                     else:
                         u = float(r['NRU'])
@@ -832,12 +983,18 @@ with rendered_tabs[-1]:
                 total_mkt_arr += np.array(p_mkt)
                 total_rev_arr += calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
                 
-                p_peak_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
-                total_peak_dau_arr += p_peak_dau
+                p_daily_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
+                global_daily_dau += p_daily_dau
                 total_mau_arr += p_mau
                 
             res['NRU'] = total_nru_arr
-            res['Peak DAU'] = total_peak_dau_arr
+            
+            peak_daus = []
+            for i in range(len(res)):
+                m_dau = global_daily_dau[i*30:(i+1)*30]
+                peak_daus.append(np.max(m_dau))
+                
+            res['Peak DAU'] = peak_daus
             res['MAU'] = total_mau_arr
             res['Marketing (UA+Tax)'] = total_mkt_arr
             res['Revenue'] = total_rev_arr
