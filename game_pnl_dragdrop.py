@@ -99,6 +99,10 @@ Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
 *   **Nút 2 (Tải Báo Cáo P&L Format):** Xuất file Báo cáo chuẩn chỉnh. Tự động dàn trang, bôi màu Dashboard, chốt tỷ giá USD, đóng băng tiêu đề. Chuyên dùng để **Gửi thẳng cho Sếp hoặc Đối tác** (Không dùng file này để upload lại vào tool).
 """
 
+@st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
+def show_manual_dialog():
+    st.markdown(MANUAL_TEXT)
+
 # ==========================================
 # KHỞI TẠO DỮ LIỆU
 # ==========================================
@@ -195,10 +199,12 @@ if "project_names" not in st.session_state:
 # SIDEBAR QUẢN LÝ DỰ ÁN & NỀN TẢNG
 # ==========================================
 with st.sidebar:
-    # HIỂN THỊ FAQ Ở TRÊN CÙNG SIDEBAR THEO YÊU CẦU
-    with st.expander("📖 HƯỚNG DẪN & FAQ", expanded=False):
-        st.markdown(MANUAL_TEXT)
+    st.markdown("### 💁‍♂️ Trợ giúp")
+    if st.button("📖 Đọc Hướng Dẫn & FAQ", use_container_width=True, type="primary"):
+        show_manual_dialog()
         
+    st.markdown("---")
+    
     st.header("📁 Quản Lý Dự Án")
     selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
     st.session_state.current_project = selected_proj
@@ -363,15 +369,11 @@ for p in current_platforms:
 # ==========================================
 # TABS HIỂN THỊ CHÍNH
 # ==========================================
-tabs_names = ["📖 Hướng Dẫn & FAQ", "💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
+tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
 rendered_tabs = st.tabs(tabs_names)
 
-# TAB ĐẦU TIÊN: HƯỚNG DẪN & FAQ
-with rendered_tabs[0]:
-    st.markdown(MANUAL_TEXT)
-
 # TAB CHI PHÍ CỐ ĐỊNH
-with rendered_tabs[1]:
+with rendered_tabs[0]:
     st.markdown(f'<div class="section-title">💸 Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs) - {cur_proj}</div>', unsafe_allow_html=True)
     st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
     
@@ -392,7 +394,7 @@ with rendered_tabs[1]:
 
 # CÁC TAB NỀN TẢNG (TRAFFIC, RR & LTV)
 for idx, p in enumerate(current_platforms):
-    with rendered_tabs[idx + 2]:
+    with rendered_tabs[idx + 1]:
         col_title, col_btn = st.columns([4, 1])
         col_title.markdown(f'<div class="section-title">Nền Tảng / Thị Trường: {p} ({cur_proj})</div>', unsafe_allow_html=True)
         if len(current_platforms) > 1:
