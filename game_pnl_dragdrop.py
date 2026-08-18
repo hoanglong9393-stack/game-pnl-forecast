@@ -56,62 +56,53 @@ MANUAL_TEXT = """
 
 **Bước 1: Khởi tạo & Quản lý dự án**
 *   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
-    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
-*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
+*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**.
 *   **Lưu & Khôi phục dữ liệu:** 
     *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
     *   *Khôi phục từ máy tính:* Kéo thả một hoặc NHIỀU file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu.
     *   *Khôi phục từ Google Drive:* Bấm nút Đồng bộ ở thanh Menu trái để nạp kho dự án Team.
 
 **Bước 2: Cấu hình Tham số & Chi phí cố định**
-*   **Tham số chung (Sidebar):** Khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)**.
-*   **Tab 💸 Chi Phí Cố Định:** Nhập các khoản định phí (Không bị scale theo NRU) như: Quỹ lương nhân sự, Tiền Server, License Fee (LF) & Branding.
+*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, LF...).
 
 **Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
 Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
 *   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
     > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
-*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn để lên số cho 30 ngày đầu ra mắt:
-    1.  *Cách tự động:* Nhập **Tổng NRU** và **CPN trung bình** mục tiêu $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)** để tool rải đều số theo công thức chuẩn.
-    2.  *Cách thủ công:* Bạn hoàn toàn có thể **gõ tay (hoặc copy/paste từ Excel)** vào trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30) theo chiến thuật chạy Ads riêng của dự án.
+*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn:
+    1.  *Cách tự động:* Nhập Tổng NRU và CPN trung bình $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)**.
+    2.  *Cách thủ công:* Gõ tay (hoặc copy/paste từ Excel) trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30).
     *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
 
 **Bước 4: Thiết lập Retention Rate (RR) & LTV**
 *   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
-*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase để mô phỏng sự hạ nhiệt nạp thẻ ở các tháng server cũ.
-    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước (VD: D7 không bao giờ được phép nhỏ hơn D3).
+*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase.
+    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước.
 
 **Bước 5: Chạy mô phỏng & Xuất báo cáo**
 Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
-1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**. Hệ thống sẽ load ma trận Cohort và sinh ra P&L (Điểm hòa vốn được bôi xanh lá).
-2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo cuối cùng gửi sếp/đối tác.
+1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**.
+2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo.
 
 **Bước 6: So sánh với Kho Dự án mẫu (Benchmark)**
-Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể:
-1. Tải về file Template Mẫu để nhập số thực tế của các dự án đã phát hành.
-2. Nạp ngược file đó lên để thêm vào Kho dữ liệu (Hệ thống tự động nhận diện các file tên bắt đầu bằng `REAL_`).
-3. Tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại, giúp bạn đánh giá tính khả thi cực kỳ trực quan.
+Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể tải Template Mẫu, nạp số thực tế và tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại.
 
 ---
 
 ### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
 
 **Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
-👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này tạo ra Doanh thu & DAU nhưng **không làm tăng thêm chi phí Marketing** của tháng OB (vì đã trả tiền mua từ tháng trước), giúp kéo CPN trung bình tháng OB xuống rất đẹp.
+👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này không làm tăng thêm chi phí Marketing của tháng OB.
 
 **Q2: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
-👉 99% nguyên nhân là do bạn nhập sai quy tắc ở bảng **LTV**. Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu. Đảm bảo LTV luôn đi ngang hoặc tăng dần!
+👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu.
 
-**Q3: Peak DAU và MAU trong bảng P&L mang ý nghĩa gì?**
-*   **Peak DAU:** Là số lượng người chơi đăng nhập hàng ngày (DAU) cao nhất đạt được trong vòng 30 ngày của tháng đó.
-*   **MAU (Monthly Active Users):** Tổng số lượng User duy nhất (Unique) vào game trong tháng (Bao gồm NRU mua mới + User cũ từ tháng trước quay lại theo tỷ lệ RR).
+**Q3: Peak DAU và MAU mang ý nghĩa gì?**
+*   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
+*   **MAU:** Tổng số lượng User duy nhất (Unique) vào game trong tháng.
 
 **Q4: NRU giảm mạnh vào nửa cuối tháng OB, tại sao DAU vẫn cao hoặc lại tăng lên?**
-👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Dù lượng người mới bơm vào (NRU) giảm đi, nhưng lượng người cũ khổng lồ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm đó. 
-
-**Q5: Tại sao có đến 2 nút tải file Excel ở Tab Báo cáo?**
-*   **Nút 1 (Tải File Cấu Hình Input):** Xuất file Data thô, siêu nhẹ. Dùng để Backup dự án hoặc chia sẻ vào Thư mục dùng chung. File tự động lưu với định dạng `PNL_xxxx_INPUT.xlsx`.
-*   **Nút 2 (Tải Báo Cáo P&L Format):** Xuất file Báo cáo chuẩn chỉnh. Tự động dàn trang, bôi màu Dashboard, chốt tỷ giá USD, đóng băng tiêu đề. Chuyên dùng để **Gửi thẳng cho Sếp hoặc Đối tác** (Không dùng file này để upload lại vào tool).
+👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Lượng người cũ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm NRU mua mới.
 """
 
 @st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
@@ -360,6 +351,43 @@ if "drive_synced" not in st.session_state:
     st.session_state.drive_synced = False
 
 # ==========================================
+# KHỞI TẠO PARAMS & STATE CHO DỰ ÁN HIỆN TẠI (NẾU CHƯA CÓ)
+# ==========================================
+cur_proj = st.session_state.current_project
+if f"params_{cur_proj}" not in st.session_state:
+    st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
+
+if f"platforms_{cur_proj}" not in st.session_state:
+    st.session_state[f"platforms_{cur_proj}"] = ["Android", "iOS"]
+current_platforms = st.session_state[f"platforms_{cur_proj}"]
+
+if f"fixed_costs_{cur_proj}" not in st.session_state: st.session_state[f"fixed_costs_{cur_proj}"] = get_default_fixed_costs(25)
+for p in current_platforms:
+    if f"traffic_{p}_{cur_proj}" not in st.session_state: st.session_state[f"traffic_{p}_{cur_proj}"] = get_default_traffic(25, p=="Android")
+    if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
+    if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
+    if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
+
+# ==========================================
+# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
+# ==========================================
+for p in current_platforms:
+    current_tr = st.session_state[f"traffic_{p}_{cur_proj}"]
+    ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
+    
+    ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
+    ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
+
+    total_ob_nru = int(np.round(ob_daily_nru_sum))
+    calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
+
+    idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
+    if len(idx_ob) > 0:
+        current_tr.loc[idx_ob[0], "NRU"] = total_ob_nru
+        current_tr.loc[idx_ob[0], "CPN (VNĐ)"] = calc_ob_cpn
+    st.session_state[f"traffic_{p}_{cur_proj}"] = current_tr
+
+# ==========================================
 # SIDEBAR: QUẢN LÝ DỰ ÁN & DATA HUB
 # ==========================================
 with st.sidebar:
@@ -373,9 +401,6 @@ with st.sidebar:
     selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
     st.session_state.current_project = selected_proj
     cur_proj = st.session_state.current_project
-    
-    if f"platforms_{cur_proj}" not in st.session_state:
-        st.session_state[f"platforms_{cur_proj}"] = ["Android", "iOS"]
     current_platforms = st.session_state[f"platforms_{cur_proj}"]
     
     with st.expander("➕ Tạo Dự Án Mới"):
@@ -413,14 +438,14 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("☁️ Đồng Bộ Kho Team (Drive)")
-    st.info("Hệ thống đã được liên kết với Kho dữ liệu nội bộ của Team. Bấm nút dưới để nạp toàn bộ dự án mẫu mới nhất.")
+    st.info("Hệ thống đã liên kết với Kho dữ liệu nội bộ. Bấm nút dưới để nạp toàn bộ dự án.")
     
     if not st.session_state.drive_synced:
         if st.button("🔄 Nạp Dữ Liệu Từ Kho Team", type="primary", use_container_width=True):
             if TEAM_DRIVE_URL and TEAM_DRIVE_URL != "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive":
                 sync_from_drive(TEAM_DRIVE_URL)
             else:
-                st.warning("⚠️ Chưa cấu hình Link Google Drive. Vui lòng sửa biến TEAM_DRIVE_URL trong mã nguồn (dòng số 16) trước khi dùng tính năng này!")
+                st.warning("⚠️ Chưa cấu hình Link Google Drive trong mã nguồn!")
     else:
         st.success("✅ Đã đồng bộ Kho Team trong phiên làm việc này!")
         st.caption("🔄 Nhấn F5 (Tải lại trang web) nếu bạn muốn nạp lại dữ liệu mới.")
@@ -441,7 +466,7 @@ with st.sidebar:
                 st.rerun()
 
     st.markdown("---")
-    st.header("📤 DATA HUB (Nạp Kế Hoạch & Thực Tế)")
+    st.header("📤 DATA HUB (Nạp file nội bộ)")
     st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx) từ máy tính.")
     
     st.download_button(
@@ -480,18 +505,23 @@ with st.sidebar:
                 time.sleep(1.5)
                 st.rerun()
 
-    st.markdown("---")
-    st.header("⚙️ Cấu Hình Tham Số Chung")
-    if f"params_{cur_proj}" not in st.session_state:
-        st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
-    p_params = st.session_state[f"params_{cur_proj}"]
+# ==========================================
+# TABS HIỂN THỊ CHÍNH
+# ==========================================
+tabs_names = ["⚙️ Tham Số & Định Phí"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp", "📈 So Sánh & Benchmark"]
+rendered_tabs = st.tabs(tabs_names)
+
+# TAB CHI PHÍ CỐ ĐỊNH & THAM SỐ
+with rendered_tabs[0]:
+    st.markdown(f'<div class="section-title">⚙️ 1. Cấu Hình Tham Số Chung - Dự án {cur_proj}</div>', unsafe_allow_html=True)
     
-    usd_rate = st.number_input("Tỷ giá USD/VNĐ", value=float(p_params.get("usd_rate", 25400.0)), step=100.0)
-    rev_share_pct = st.number_input("Revenue Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1)
-    vat_pct = st.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5)
-    payment_fee_pct = st.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5)
-    st.markdown("👉 **Chỉ số User chuyển đổi**")
-    prelaunch_comeback_pct = st.number_input("Tỷ lệ Pre-launch quay lại ngày OB (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0)
+    p_params = st.session_state[f"params_{cur_proj}"]
+    c1, c2, c3, c4, c5 = st.columns(5)
+    usd_rate = c1.number_input("Tỷ giá USD/VNĐ", value=float(p_params.get("usd_rate", 25400.0)), step=100.0, key=f"usd_{cur_proj}")
+    rev_share_pct = c2.number_input("Rev Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1, key=f"rev_{cur_proj}")
+    vat_pct = c3.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5, key=f"vat_{cur_proj}")
+    payment_fee_pct = c4.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5, key=f"pay_{cur_proj}")
+    prelaunch_comeback_pct = c5.number_input("User Comeback (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0, help="Tỷ lệ Pre-launch quay lại ngày OB", key=f"cb_{cur_proj}")
     
     st.session_state[f"params_{cur_proj}"] = {
         "usd_rate": usd_rate,
@@ -499,45 +529,8 @@ with st.sidebar:
         "prelaunch_comeback_pct": prelaunch_comeback_pct
     }
 
-# ==========================================
-# KHỞI TẠO STATE CHO DỰ ÁN HIỆN TẠI (NẾU CHƯA CÓ)
-# ==========================================
-if f"fixed_costs_{cur_proj}" not in st.session_state: st.session_state[f"fixed_costs_{cur_proj}"] = get_default_fixed_costs(25)
-for p in current_platforms:
-    if f"traffic_{p}_{cur_proj}" not in st.session_state: st.session_state[f"traffic_{p}_{cur_proj}"] = get_default_traffic(25, p=="Android")
-    if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
-    if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
-    if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
-
-# ==========================================
-# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
-# ==========================================
-for p in current_platforms:
-    current_tr = st.session_state[f"traffic_{p}_{cur_proj}"]
-    ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
-    params = st.session_state[f"params_{cur_proj}"]
-
-    ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
-    ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
-
-    total_ob_nru = int(np.round(ob_daily_nru_sum))
-    calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
-
-    idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
-    if len(idx_ob) > 0:
-        current_tr.loc[idx_ob[0], "NRU"] = total_ob_nru
-        current_tr.loc[idx_ob[0], "CPN (VNĐ)"] = calc_ob_cpn
-    st.session_state[f"traffic_{p}_{cur_proj}"] = current_tr
-
-# ==========================================
-# TABS HIỂN THỊ CHÍNH
-# ==========================================
-tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp", "📈 So Sánh & Benchmark"]
-rendered_tabs = st.tabs(tabs_names)
-
-# TAB CHI PHÍ CỐ ĐỊNH
-with rendered_tabs[0]:
-    st.markdown(f'<div class="section-title">💸 Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs) - {cur_proj}</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown(f'<div class="section-title">💸 2. Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs)</div>', unsafe_allow_html=True)
     st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
     
     fc_df = st.session_state[f"fixed_costs_{cur_proj}"]
