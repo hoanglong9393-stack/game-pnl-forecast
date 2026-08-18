@@ -285,14 +285,11 @@ for p in current_platforms:
     ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
     params = st.session_state[f"params_{cur_proj}"]
 
-    pre_nru = float(current_tr.loc[current_tr['Tháng'] == 'Pre-launch', 'NRU'].sum())
-    comeback_rate = float(params.get("prelaunch_comeback_pct", 60.0)) / 100.0
-    comeback_users = pre_nru * comeback_rate
-
     ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
     ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
 
-    total_ob_nru = int(np.round(ob_daily_nru_sum + comeback_users))
+    # TÍNH NGẦM TRÊN FINAL P&L, HIỂN THỊ CHỈ HIỂN THỊ NRU MỚI KHÔNG CỘNG DỒN COMEBACK
+    total_ob_nru = int(np.round(ob_daily_nru_sum))
     calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
 
     idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
@@ -821,7 +818,7 @@ with rendered_tabs[-1]:
                 p_nru, p_mkt = [], []
                 for _, r in tr_df.iterrows():
                     if r['Tháng'] == "🔒 Month OB (Auto)":
-                        p_nru.append(ob_calc["NRU (Users)"].sum())
+                        p_nru.append(ob_df["NRU (Users)"].sum())  # TRÁNH DOUBLE COUNT TRÊN BẢNG P&L
                         p_mkt.append((ob_df["NRU (Users)"] * ob_df["CPN (VNĐ)"]).sum())
                     else:
                         u = float(r['NRU'])
