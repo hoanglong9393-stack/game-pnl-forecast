@@ -117,13 +117,33 @@ def show_manual_dialog():
 # ==========================================
 # KHỞI TẠO DỮ LIỆU & MOCK DATA CHO DỰ ÁN MẪU
 # ==========================================
+ALL_D_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
+ALL_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"]
+ALL_D_TARGETS = [3, 7, 14, 30, 60, 90, 180, 210, 240, 270, 300, 330, 360]
+
+def get_chart_month_labels(num_months):
+    if num_months == 0: return []
+    if num_months == 1: return ["PRE-LAUNCH"]
+    labels = ["PRE-LAUNCH", "MONTH OB"]
+    for i in range(1, num_months - 1):
+        labels.append(f"MONTH OB+{i}")
+    return labels
+
 def get_dummy_sample_project():
+    labels_12 = get_chart_month_labels(12)
     return {
-        "Monthly Revenue": pd.DataFrame({"Tháng": [f"Month {i+1}" for i in range(12)], "Doanh Thu (VNĐ)": [10e9, 8e9, 6e9, 4e9, 3.5e9, 3e9, 2.5e9, 2e9, 1.8e9, 1.5e9, 1.2e9, 1e9]}),
-        "LTV": pd.DataFrame({"Ngày": ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"], 
-                             "LTV (VNĐ)": [12000, 18000, 36000, 50000, 65000, 85000, 100000, 130000, 135000, 140000, 145000, 150000, 155000, 160000]}),
-        "RR": pd.DataFrame({"Ngày": ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"], 
-                            "RR (%)": [45.0, 22.0, 10.0, 6.0, 3.5, 1.5, 0.8, 0.4, 0.1]})
+        "Android": {
+            "NRU": pd.DataFrame({"Tháng": labels_12, "NRU": [80000, 40000, 20000, 15000, 10000, 10000, 8000, 8000, 6000, 5000, 5000, 4000]}),
+            "Revenue": pd.DataFrame({"Tháng": labels_12, "Doanh Thu (VNĐ)": [8e9, 6e9, 4e9, 3e9, 2.5e9, 2e9, 1.8e9, 1.5e9, 1.2e9, 1e9, 0.8e9, 0.5e9]}),
+            "LTV": pd.DataFrame({"Ngày": ALL_D_COLS, "LTV (VNĐ)": [10000, 15000, 30000, 45000, 60000, 75000, 90000, 110000, 115000, 120000, 125000, 130000, 135000, 140000]}),
+            "RR": pd.DataFrame({"Ngày": ALL_RR_COLS, "RR (%)": [40.0, 20.0, 10.0, 6.0, 3.5, 1.5, 0.8, 0.4, 0.1]})
+        },
+        "iOS": {
+            "NRU": pd.DataFrame({"Tháng": labels_12, "NRU": [40000, 20000, 10000, 8000, 5000, 5000, 4000, 4000, 3000, 2500, 2500, 2000]}),
+            "Revenue": pd.DataFrame({"Tháng": labels_12, "Doanh Thu (VNĐ)": [4e9, 3e9, 2e9, 1.5e9, 1.2e9, 1e9, 0.9e9, 0.7e9, 0.6e9, 0.5e9, 0.4e9, 0.3e9]}),
+            "LTV": pd.DataFrame({"Ngày": ALL_D_COLS, "LTV (VNĐ)": [15000, 25000, 45000, 65000, 85000, 105000, 120000, 150000, 155000, 160000, 165000, 170000, 175000, 180000]}),
+            "RR": pd.DataFrame({"Ngày": ALL_RR_COLS, "RR (%)": [45.0, 25.0, 12.0, 8.0, 5.0, 3.0, 1.5, 0.8, 0.2]})
+        }
     }
 
 if "sample_projects" not in st.session_state:
@@ -134,11 +154,29 @@ if "sample_projects" not in st.session_state:
 def get_sample_template_excel():
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        get_dummy_sample_project()["Monthly Revenue"].to_excel(writer, sheet_name="Monthly Revenue", index=False)
-        get_dummy_sample_project()["LTV"].to_excel(writer, sheet_name="LTV", index=False)
-        get_dummy_sample_project()["RR"].to_excel(writer, sheet_name="RR", index=False)
+        dummy = get_dummy_sample_project()
+        for p, data in dummy.items():
+            data["NRU"].to_excel(writer, sheet_name=f"NRU {p}", index=False)
+            data["Revenue"].to_excel(writer, sheet_name=f"Revenue {p}", index=False)
+            data["LTV"].to_excel(writer, sheet_name=f"LTV {p}", index=False)
+            data["RR"].to_excel(writer, sheet_name=f"RR {p}", index=False)
     buffer.seek(0)
     return buffer
+
+def load_sample_project(excel_data, sample_name):
+    plats = set()
+    for sheet in excel_data.sheet_names:
+        if sheet.startswith("NRU "): plats.add(sheet.replace("NRU ", ""))
+    
+    project_data = {}
+    for p in plats:
+        project_data[p] = {
+            "NRU": pd.read_excel(excel_data, f"NRU {p}").fillna(0),
+            "Revenue": pd.read_excel(excel_data, f"Revenue {p}").fillna(0),
+            "LTV": pd.read_excel(excel_data, f"LTV {p}").fillna(0),
+            "RR": pd.read_excel(excel_data, f"RR {p}").fillna(0)
+        }
+    st.session_state.sample_projects[sample_name] = project_data
 
 def get_default_fixed_costs(total_months=25):
     months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, total_months - 1)]
@@ -169,10 +207,6 @@ def get_default_ob_daily(total_ob_nru, default_cpn):
         "NRU (Users)": nru_days,
         "CPN (VNĐ)": [default_cpn] * 30
     })
-
-ALL_D_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
-ALL_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"]
-ALL_D_TARGETS = [3, 7, 14, 30, 60, 90, 180, 210, 240, 270, 300, 330, 360]
 
 def get_default_ltv(is_android=True):
     if is_android:
@@ -225,7 +259,6 @@ def migrate_month_ob(df):
         df["Áp dụng từ Tháng"] = df["Áp dụng từ Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
     return df
 
-# HÀM LÕI LOAD DATA DỰ PHÓNG
 def load_project_from_excel(excel_data, imported_proj_name):
     found_plats = []
     for sheet in excel_data.sheet_names:
@@ -261,15 +294,6 @@ def load_project_from_excel(excel_data, imported_proj_name):
     if 'Params' in excel_data.sheet_names:
         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
 
-# HÀM LÕI LOAD DATA THỰC TẾ (BENCHMARK)
-def load_sample_project(excel_data, sample_name):
-    st.session_state.sample_projects[sample_name] = {
-        "Monthly Revenue": pd.read_excel(excel_data, sheet_name="Monthly Revenue").fillna(0),
-        "LTV": pd.read_excel(excel_data, sheet_name="LTV").fillna(0),
-        "RR": pd.read_excel(excel_data, sheet_name="RR").fillna(0)
-    }
-
-# HÀM ĐỒNG BỘ TỪ GOOGLE DRIVE
 @st.dialog("🔄 Đang đồng bộ từ Google Drive...", width="large")
 def sync_from_drive(folder_url):
     try:
@@ -298,12 +322,11 @@ def sync_from_drive(folder_url):
             file_name = os.path.basename(filepath)
             try:
                 excel_data = pd.ExcelFile(filepath)
-                # PHÂN LOẠI FILE TỰ ĐỘNG THEO TIỀN TỐ
                 if file_name.startswith("REAL_"):
                     sample_name = file_name.replace("REAL_", "").replace("_INPUT", "").replace(".xlsx", "")
                     load_sample_project(excel_data, sample_name)
                     success_real += 1
-                else: # Mặc định coi là PNL Input
+                else: 
                     imported_proj_name = file_name.replace("PNL_", "").replace("_INPUT", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
                     if imported_proj_name not in st.session_state.project_names:
                         st.session_state.project_names.append(imported_proj_name)
@@ -632,7 +655,7 @@ def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
     rr_mapping = {}
     for _, row in df_rr.iterrows():
         try:
-            anchors = {0: 100.0} # D0 RR is 100%
+            anchors = {0: 100.0}
             for c in ALL_RR_COLS:
                 if c in row and not pd.isna(row[c]):
                     anchors[int(c[1:])] = float(row[c])
@@ -832,7 +855,6 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
 
         for sheet_name in ['P&L Tổng Hợp (VNĐ)', 'P&L (USD)']:
             ws = writer.book[sheet_name]
-            
             for cell in ws[1]:
                 cell.fill = fill_header
                 cell.font = font_white_bold
@@ -878,7 +900,6 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                     cell.fill = cell_fill
                     cell.font = cell_font
                     cell.border = thin_border
-                    
                     ws.freeze_panes = 'C3'
                     
                     if idx == 0:
@@ -994,7 +1015,7 @@ with rendered_tabs[-2]:
         with st.spinner("Đang tính ma trận Cohort hợp nhất đa nền tảng..."):
             res = pd.DataFrame()
             display_months = fixed_costs['Tháng'].replace("🔒 Month OB (Auto)", "Month OB").tolist()
-            res['Tháng'] = display_months
+            res['Tháng'] = [m.upper() for m in display_months]
             
             total_nru_arr = np.zeros(len(res))
             global_daily_dau = np.zeros(len(res) * 30)
@@ -1116,25 +1137,84 @@ with rendered_tabs[-1]:
     
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.info("Mẹo: Bạn có thể tải nhiều file REAL_*.xlsx cùng lúc ở thanh Menu bên trái, hoặc đồng bộ cả thư mục Google Drive chứa các dự án thực tế.")
+        st.info("Mẹo: Mở thanh Menu bên trái để tải File Kế hoạch (PNL) và File Thực tế (REAL) đồng thời vào hệ thống.")
                 
     with col2:
-        selected_samples = st.multiselect(
-            "📍 Chọn các Dự án mẫu (Thực tế) để so sánh đè lên:", 
-            options=list(st.session_state.sample_projects.keys()), 
-            default=list(st.session_state.sample_projects.keys())[0] if st.session_state.sample_projects else None
-        )
-        comp_plat = st.selectbox("Lấy chỉ số (LTV/RR) của Kế hoạch hiện tại ở nền tảng nào để so sánh?", current_platforms)
+        comp_plat = st.selectbox("Lấy Nền tảng / Thị trường nào của Kế hoạch hiện tại để đem đi so sánh?", current_platforms)
+        
+        valid_samples = [s for s in st.session_state.sample_projects.keys() if comp_plat in st.session_state.sample_projects[s]]
+        if not valid_samples:
+            st.warning(f"⚠️ Kho mẫu hiện tại chưa có dữ liệu thực tế cho nền tảng '{comp_plat}'.")
+            selected_samples = []
+        else:
+            selected_samples = st.multiselect(
+                f"📍 Chọn các Dự án Thực tế (Có dữ liệu '{comp_plat}') để so sánh đè lên:", 
+                options=valid_samples, 
+                default=valid_samples[0] if valid_samples else None
+            )
 
     st.markdown("---")
     
     if f"pnl_res_{cur_proj}" not in st.session_state:
         st.warning("⚠️ Vui lòng chuyển sang Tab 'Báo Cáo P&L Tổng Hợp' và bấm nút 'Chạy Mô Phỏng' trước khi xem biểu đồ so sánh!")
     else:
-        # DATA PREPARATION KẾ HOẠCH
-        res_df = st.session_state[f"pnl_res_{cur_proj}"]
-        cur_rev_data = res_df['Revenue'].values
-        cur_month_labels = [f"Tháng {i+1}" for i in range(len(res_df))]
+        tr_df = st.session_state[f"traffic_{comp_plat}_{cur_proj}"]
+        ob_df = st.session_state[f"ob_daily_{comp_plat}_{cur_proj}"]
+        ltv_df = st.session_state[f"ltv_{comp_plat}_{cur_proj}"]
+        
+        params = st.session_state[f"params_{cur_proj}"]
+        comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
+        
+        pre_nru = float(tr_df.loc[tr_df['Tháng'] == 'Pre-launch', 'NRU'].sum())
+        ob_calc = ob_df.copy()
+        if len(ob_calc) > 0:
+            ob_calc.loc[0, "NRU (Users)"] += pre_nru * comeback_rate
+            
+        cur_rev_data = calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
+        
+        cur_nru_data = []
+        for _, r in tr_df.iterrows():
+            if r['Tháng'] == "🔒 Month OB (Auto)":
+                cur_nru_data.append(ob_calc["NRU (Users)"].sum())
+            else:
+                cur_nru_data.append(float(r['NRU']))
+                
+        # Generate uniform uppercase labels
+        max_len_nru = len(cur_nru_data)
+        for s in selected_samples:
+            max_len_nru = max(max_len_nru, len(st.session_state.sample_projects[s][comp_plat]["NRU"]))
+        
+        x_ticks_nru = list(range(max_len_nru))
+        labels_nru = get_chart_month_labels(max_len_nru)
+
+        max_len_rev = len(cur_rev_data)
+        for s in selected_samples:
+            max_len_rev = max(max_len_rev, len(st.session_state.sample_projects[s][comp_plat]["Revenue"]))
+        
+        x_ticks_rev = list(range(max_len_rev))
+        labels_rev = get_chart_month_labels(max_len_rev)
+
+        # 1. BIỂU ĐỒ NRU
+        st.markdown(f"#### 1. So Sánh New Registered User (NRU) - Nền tảng {comp_plat}")
+        fig_nru = go.Figure()
+        fig_nru.add_trace(go.Scatter(x=list(range(len(cur_nru_data))), y=cur_nru_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#3B82F6')))
+        for s in selected_samples:
+            s_nru = st.session_state.sample_projects[s][comp_plat]["NRU"]["NRU"].values
+            fig_nru.add_trace(go.Scatter(x=list(range(len(s_nru))), y=s_nru, mode='lines', name=s, line=dict(width=2)))
+        fig_nru.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks_nru, ticktext=labels_nru), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+        st.plotly_chart(fig_nru, use_container_width=True)
+
+        # 2. BIỂU ĐỒ DOANH THU
+        st.markdown(f"#### 2. So Sánh Doanh Thu Hàng Tháng (Monthly Revenue) - Nền tảng {comp_plat}")
+        fig_rev = go.Figure()
+        fig_rev.add_trace(go.Scatter(x=list(range(len(cur_rev_data))), y=cur_rev_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#DC2626')))
+        for s in selected_samples:
+            s_rev = st.session_state.sample_projects[s][comp_plat]["Revenue"]["Doanh Thu (VNĐ)"].values
+            fig_rev.add_trace(go.Scatter(x=list(range(len(s_rev))), y=s_rev, mode='lines', name=s, line=dict(width=2)))
+        fig_rev.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks_rev, ticktext=labels_rev), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+        st.plotly_chart(fig_rev, use_container_width=True)
+
+        c1, c2 = st.columns(2)
         
         cur_ltv_row = st.session_state[f"ltv_{comp_plat}_{cur_proj}"].iloc[0]
         cur_ltv_data = [cur_ltv_row[c] for c in ALL_D_COLS]
@@ -1142,37 +1222,24 @@ with rendered_tabs[-1]:
         cur_rr_row = st.session_state[f"rr_{comp_plat}_{cur_proj}"].iloc[0]
         cur_rr_data = [cur_rr_row[c] for c in ALL_RR_COLS]
 
-        # 1. BIỂU ĐỒ DOANH THU
-        st.markdown("#### 1. So Sánh Doanh Thu Hàng Tháng (Monthly Revenue)")
-        fig_rev = go.Figure()
-        fig_rev.add_trace(go.Scatter(x=cur_month_labels, y=cur_rev_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#DC2626')))
-        for s in selected_samples:
-            s_rev = st.session_state.sample_projects[s]["Monthly Revenue"]["Doanh Thu (VNĐ)"].values
-            s_labels = [f"Tháng {i+1}" for i in range(len(s_rev))]
-            fig_rev.add_trace(go.Scatter(x=s_labels, y=s_rev, mode='lines', name=s, line=dict(width=2)))
-        fig_rev.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
-        st.plotly_chart(fig_rev, use_container_width=True)
-
-        c1, c2 = st.columns(2)
-        
-        # 2. BIỂU ĐỒ RR
+        # 3. BIỂU ĐỒ RR
         with c1:
-            st.markdown("#### 2. So Sánh Retention Rate (%)")
+            st.markdown("#### 3. So Sánh Retention Rate (%)")
             fig_rr = go.Figure()
-            fig_rr.add_trace(go.Scatter(x=ALL_RR_COLS, y=cur_rr_data, mode='lines+markers', name=f"KH Hiện Tại ({comp_plat})", line=dict(width=4, dash='dash', color='#D97706')))
+            fig_rr.add_trace(go.Scatter(x=ALL_RR_COLS, y=cur_rr_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#D97706')))
             for s in selected_samples:
-                s_rr = st.session_state.sample_projects[s]["RR"]
+                s_rr = st.session_state.sample_projects[s][comp_plat]["RR"]
                 fig_rr.add_trace(go.Scatter(x=s_rr["Ngày"], y=s_rr["RR (%)"], mode='lines', name=s, line=dict(width=2)))
             fig_rr.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
             st.plotly_chart(fig_rr, use_container_width=True)
 
-        # 3. BIỂU ĐỒ LTV
+        # 4. BIỂU ĐỒ LTV
         with c2:
-            st.markdown("#### 3. So Sánh LTV Tích Lũy (VNĐ)")
+            st.markdown("#### 4. So Sánh LTV Tích Lũy (VNĐ)")
             fig_ltv = go.Figure()
-            fig_ltv.add_trace(go.Scatter(x=ALL_D_COLS, y=cur_ltv_data, mode='lines+markers', name=f"KH Hiện Tại ({comp_plat})", line=dict(width=4, dash='dash', color='#22C55E')))
+            fig_ltv.add_trace(go.Scatter(x=ALL_D_COLS, y=cur_ltv_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#22C55E')))
             for s in selected_samples:
-                s_ltv = st.session_state.sample_projects[s]["LTV"]
+                s_ltv = st.session_state.sample_projects[s][comp_plat]["LTV"]
                 fig_ltv.add_trace(go.Scatter(x=s_ltv["Ngày"], y=s_ltv["LTV (VNĐ)"], mode='lines', name=s, line=dict(width=2)))
             fig_ltv.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
             st.plotly_chart(fig_ltv, use_container_width=True)
