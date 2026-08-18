@@ -56,7 +56,8 @@ MANUAL_TEXT = """
 
 **Bước 1: Khởi tạo & Quản lý dự án**
 *   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
-*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**.
+    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
+*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
 *   **Lưu & Khôi phục dữ liệu:** 
     *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
     *   *Khôi phục từ máy tính:* Kéo thả một hoặc NHIỀU file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu.
@@ -295,7 +296,7 @@ def sync_from_drive(folder_url):
         import gdown
     except ImportError:
         st.error("⚠️ Hệ thống chưa được cài đặt thư viện 'gdown'.")
-        st.info("Vui lòng mở Terminal/CMD và gõ lệnh: `pip install gdown`")
+        st.info("Vui lòng thêm thư viện `gdown` vào file `requirements.txt` trên GitHub để sử dụng tính năng này.")
         return
 
     temp_dir = "temp_drive_sync_data"
@@ -1145,17 +1146,14 @@ with rendered_tabs[-1]:
         st.info("Mẹo: Mở thanh Menu bên trái để tải File Kế hoạch (PNL) và File Thực tế (REAL) đồng thời vào hệ thống.")
                 
     with col2:
-        comp_plat = st.selectbox("Lấy Nền tảng / Thị trường nào của Kế hoạch hiện tại để đem đi so sánh?", current_platforms)
-        
-        valid_samples = [s for s in st.session_state.sample_projects.keys() if comp_plat in st.session_state.sample_projects[s]]
-        if not valid_samples:
-            st.warning(f"⚠️ Kho mẫu hiện tại chưa có dữ liệu thực tế cho nền tảng '{comp_plat}'.")
+        if not st.session_state.sample_projects:
+            st.warning("⚠️ Kho mẫu hiện tại chưa có dữ liệu thực tế nào.")
             selected_samples = []
         else:
             selected_samples = st.multiselect(
-                f"📍 Chọn các Dự án Thực tế (Có dữ liệu '{comp_plat}') để so sánh đè lên:", 
-                options=valid_samples, 
-                default=valid_samples[0] if valid_samples else None
+                "📍 Chọn các Dự án Thực tế để so sánh đè lên:", 
+                options=list(st.session_state.sample_projects.keys()), 
+                default=list(st.session_state.sample_projects.keys())[0] if st.session_state.sample_projects else None
             )
 
     st.markdown("---")
@@ -1163,88 +1161,92 @@ with rendered_tabs[-1]:
     if f"pnl_res_{cur_proj}" not in st.session_state:
         st.warning("⚠️ Vui lòng chuyển sang Tab 'Báo Cáo P&L Tổng Hợp' và bấm nút 'Chạy Mô Phỏng' trước khi xem biểu đồ so sánh!")
     else:
-        tr_df = st.session_state[f"traffic_{comp_plat}_{cur_proj}"]
-        ob_df = st.session_state[f"ob_daily_{comp_plat}_{cur_proj}"]
-        ltv_df = st.session_state[f"ltv_{comp_plat}_{cur_proj}"]
+        res_df = st.session_state[f"pnl_res_{cur_proj}"]
+        cur_total_nru = res_df['NRU'].values
+        cur_total_rev = res_df['Revenue'].values
         
-        params = st.session_state[f"params_{cur_proj}"]
-        comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
-        
-        pre_nru = float(tr_df.loc[tr_df['Tháng'] == 'Pre-launch', 'NRU'].sum())
-        ob_calc = ob_df.copy()
-        if len(ob_calc) > 0:
-            ob_calc.loc[0, "NRU (Users)"] += pre_nru * comeback_rate
+        # Tính max_len cho trục X để chuẩn hóa
+        max_len = len(res_df)
+        sample_totals = {}
+        for s in selected_samples:
+            s_data = st.session_state.sample_projects[s]
+            s_max_len = 0
+            for p, d in s_data.items():
+                s_max_len = max(s_max_len, len(d["NRU"]))
+            max_len = max(max_len, s_max_len)
             
-        cur_rev_data = calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
-        
-        cur_nru_data = []
-        for _, r in tr_df.iterrows():
-            if r['Tháng'] == "🔒 Month OB (Auto)":
-                cur_nru_data.append(ob_calc["NRU (Users)"].sum())
-            else:
-                cur_nru_data.append(float(r['NRU']))
-                
-        # TRỤC X ĐƯỢC CHUẨN HÓA SANG IN HOA
-        max_len_nru = len(cur_nru_data)
-        for s in selected_samples:
-            max_len_nru = max(max_len_nru, len(st.session_state.sample_projects[s][comp_plat]["NRU"]))
-        
-        x_ticks_nru = list(range(max_len_nru))
-        labels_nru = get_chart_month_labels(max_len_nru)
+            s_tot_nru = np.zeros(s_max_len)
+            s_tot_rev = np.zeros(s_max_len)
+            for p, d in s_data.items():
+                nru_v = d["NRU"]["NRU"].values
+                s_tot_nru[:len(nru_v)] += nru_v
+                rev_v = d["Revenue"]["Doanh Thu (VNĐ)"].values
+                s_tot_rev[:len(rev_v)] += rev_v
+            sample_totals[s] = {"NRU": s_tot_nru, "Revenue": s_tot_rev}
+            
+        x_ticks = list(range(max_len))
+        labels_x = get_chart_month_labels(max_len)
 
-        max_len_rev = len(cur_rev_data)
-        for s in selected_samples:
-            max_len_rev = max(max_len_rev, len(st.session_state.sample_projects[s][comp_plat]["Revenue"]))
-        
-        x_ticks_rev = list(range(max_len_rev))
-        labels_rev = get_chart_month_labels(max_len_rev)
-
-        # 1. BIỂU ĐỒ NRU
-        st.markdown(f"#### 1. So Sánh New Registered User (NRU) - Nền tảng {comp_plat}")
-        fig_nru = go.Figure()
-        fig_nru.add_trace(go.Scatter(x=list(range(len(cur_nru_data))), y=cur_nru_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#3B82F6')))
-        for s in selected_samples:
-            s_nru = st.session_state.sample_projects[s][comp_plat]["NRU"]["NRU"].values
-            fig_nru.add_trace(go.Scatter(x=list(range(len(s_nru))), y=s_nru, mode='lines', name=s, line=dict(width=2)))
-        fig_nru.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks_nru, ticktext=labels_nru), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
-        st.plotly_chart(fig_nru, use_container_width=True)
-
-        # 2. BIỂU ĐỒ DOANH THU
-        st.markdown(f"#### 2. So Sánh Doanh Thu Hàng Tháng (Monthly Revenue) - Nền tảng {comp_plat}")
+        # 1. TỔNG DOANH THU
+        st.markdown(f"#### 1. So Sánh Tổng Doanh Thu Kế Hoạch vs Thực Tế (All Platforms)")
         fig_rev = go.Figure()
-        fig_rev.add_trace(go.Scatter(x=list(range(len(cur_rev_data))), y=cur_rev_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#DC2626')))
+        fig_rev.add_trace(go.Scatter(x=list(range(len(cur_total_rev))), y=cur_total_rev, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#DC2626')))
         for s in selected_samples:
-            s_rev = st.session_state.sample_projects[s][comp_plat]["Revenue"]["Doanh Thu (VNĐ)"].values
-            fig_rev.add_trace(go.Scatter(x=list(range(len(s_rev))), y=s_rev, mode='lines', name=s, line=dict(width=2)))
-        fig_rev.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks_rev, ticktext=labels_rev), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+            fig_rev.add_trace(go.Scatter(x=list(range(len(sample_totals[s]["Revenue"]))), y=sample_totals[s]["Revenue"], mode='lines', name=s, line=dict(width=2)))
+        fig_rev.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks, ticktext=labels_x), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
         st.plotly_chart(fig_rev, use_container_width=True)
 
-        c1, c2 = st.columns(2)
-        
-        cur_ltv_row = st.session_state[f"ltv_{comp_plat}_{cur_proj}"].iloc[0]
-        cur_ltv_data = [cur_ltv_row[c] for c in ALL_D_COLS]
-        
-        cur_rr_row = st.session_state[f"rr_{comp_plat}_{cur_proj}"].iloc[0]
-        cur_rr_data = [cur_rr_row[c] for c in ALL_RR_COLS]
+        # 2. TỔNG NRU
+        st.markdown(f"#### 2. So Sánh Tổng Lượng User Mới (Total NRU) - All Platforms")
+        fig_nru = go.Figure()
+        fig_nru.add_trace(go.Scatter(x=list(range(len(cur_total_nru))), y=cur_total_nru, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#3B82F6')))
+        for s in selected_samples:
+            fig_nru.add_trace(go.Scatter(x=list(range(len(sample_totals[s]["NRU"]))), y=sample_totals[s]["NRU"], mode='lines', name=s, line=dict(width=2)))
+        fig_nru.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks, ticktext=labels_x), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+        st.plotly_chart(fig_nru, use_container_width=True)
 
-        # 3. BIỂU ĐỒ RR
-        with c1:
-            st.markdown("#### 3. So Sánh Retention Rate (%)")
-            fig_rr = go.Figure()
-            fig_rr.add_trace(go.Scatter(x=ALL_RR_COLS, y=cur_rr_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#D97706')))
-            for s in selected_samples:
-                s_rr = st.session_state.sample_projects[s][comp_plat]["RR"]
-                fig_rr.add_trace(go.Scatter(x=s_rr["Ngày"], y=s_rr["RR (%)"], mode='lines', name=s, line=dict(width=2)))
-            fig_rr.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
-            st.plotly_chart(fig_rr, use_container_width=True)
+        # 3, 4, 5... PER PLATFORM RR & LTV
+        ordered_plats = []
+        if "iOS" in current_platforms: ordered_plats.append("iOS")
+        if "Android" in current_platforms: ordered_plats.append("Android")
+        for p in current_platforms:
+            if p not in ordered_plats: ordered_plats.append(p)
+            
+        idx_sec = 3
+        for p in ordered_plats:
+            # Kiểm tra xem có mẫu nào chứa nền tảng này không
+            has_sample_data = any(p in st.session_state.sample_projects[s] for s in selected_samples)
+            
+            # Chỉ hiển thị iOS, Android, hoặc nền tảng phụ NẾU có dữ liệu thực tế mẫu
+            if p not in ["iOS", "Android"] and not has_sample_data:
+                continue
+            
+            st.markdown(f"#### {idx_sec}. So Sánh Retention Rate & LTV - Nền tảng {p}")
+            idx_sec += 1
+            
+            cur_ltv_row = st.session_state[f"ltv_{p}_{cur_proj}"].iloc[0]
+            cur_ltv_data = [cur_ltv_row[c] for c in ALL_D_COLS]
+            
+            cur_rr_row = st.session_state[f"rr_{p}_{cur_proj}"].iloc[0]
+            cur_rr_data = [cur_rr_row[c] for c in ALL_RR_COLS]
 
-        # 4. BIỂU ĐỒ LTV
-        with c2:
-            st.markdown("#### 4. So Sánh LTV Tích Lũy (VNĐ)")
-            fig_ltv = go.Figure()
-            fig_ltv.add_trace(go.Scatter(x=ALL_D_COLS, y=cur_ltv_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#22C55E')))
-            for s in selected_samples:
-                s_ltv = st.session_state.sample_projects[s][comp_plat]["LTV"]
-                fig_ltv.add_trace(go.Scatter(x=s_ltv["Ngày"], y=s_ltv["LTV (VNĐ)"], mode='lines', name=s, line=dict(width=2)))
-            fig_ltv.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
-            st.plotly_chart(fig_ltv, use_container_width=True)
+            c1, c2 = st.columns(2)
+            with c1:
+                fig_rr = go.Figure()
+                fig_rr.add_trace(go.Scatter(x=ALL_RR_COLS, y=cur_rr_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#D97706')))
+                for s in selected_samples:
+                    if p in st.session_state.sample_projects[s]:
+                        s_rr = st.session_state.sample_projects[s][p]["RR"]
+                        fig_rr.add_trace(go.Scatter(x=s_rr["Ngày"], y=s_rr["RR (%)"], mode='lines', name=s, line=dict(width=2)))
+                fig_rr.update_layout(title=f"Retention Rate (%) - {p}", height=350, margin=dict(l=20, r=20, t=40, b=20), hovermode="x unified")
+                st.plotly_chart(fig_rr, use_container_width=True)
+
+            with c2:
+                fig_ltv = go.Figure()
+                fig_ltv.add_trace(go.Scatter(x=ALL_D_COLS, y=cur_ltv_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#22C55E')))
+                for s in selected_samples:
+                    if p in st.session_state.sample_projects[s]:
+                        s_ltv = st.session_state.sample_projects[s][p]["LTV"]
+                        fig_ltv.add_trace(go.Scatter(x=s_ltv["Ngày"], y=s_ltv["LTV (VNĐ)"], mode='lines', name=s, line=dict(width=2)))
+                fig_ltv.update_layout(title=f"LTV Tích lũy (VNĐ) - {p}", height=350, margin=dict(l=20, r=20, t=40, b=20), hovermode="x unified")
+                st.plotly_chart(fig_ltv, use_container_width=True)
