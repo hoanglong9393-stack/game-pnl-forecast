@@ -82,6 +82,12 @@ Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
 1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**. Hệ thống sẽ load ma trận Cohort và sinh ra P&L (Điểm hòa vốn được bôi xanh lá).
 2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo cuối cùng gửi sếp/đối tác.
 
+**Bước 6: So sánh với Kho Dự án mẫu (Benchmark)**
+Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể:
+1. Tải về file Template Mẫu để nhập số thực tế của các dự án đã phát hành.
+2. Tải ngược file đó lên để thêm vào Kho dữ liệu.
+3. Tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại, giúp bạn đánh giá tính khả thi cực kỳ trực quan.
+
 ---
 
 ### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
@@ -109,8 +115,31 @@ def show_manual_dialog():
     st.markdown(MANUAL_TEXT)
 
 # ==========================================
-# KHỞI TẠO DỮ LIỆU & IMPORT EXCEL CORE
+# KHỞI TẠO DỮ LIỆU & MOCK DATA CHO DỰ ÁN MẪU
 # ==========================================
+def get_dummy_sample_project():
+    return {
+        "Monthly Revenue": pd.DataFrame({"Tháng": [f"Month {i+1}" for i in range(12)], "Doanh Thu (VNĐ)": [10e9, 8e9, 6e9, 4e9, 3.5e9, 3e9, 2.5e9, 2e9, 1.8e9, 1.5e9, 1.2e9, 1e9]}),
+        "LTV": pd.DataFrame({"Ngày": ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"], 
+                             "LTV (VNĐ)": [12000, 18000, 36000, 50000, 65000, 85000, 100000, 130000, 135000, 140000, 145000, 150000, 155000, 160000]}),
+        "RR": pd.DataFrame({"Ngày": ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"], 
+                            "RR (%)": [45.0, 22.0, 10.0, 6.0, 3.5, 1.5, 0.8, 0.4, 0.1]})
+    }
+
+if "sample_projects" not in st.session_state:
+    st.session_state.sample_projects = {
+        "🎮 Game RPG Mẫu A (Thành công)": get_dummy_sample_project()
+    }
+
+def get_sample_template_excel():
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        get_dummy_sample_project()["Monthly Revenue"].to_excel(writer, sheet_name="Monthly Revenue", index=False)
+        get_dummy_sample_project()["LTV"].to_excel(writer, sheet_name="LTV", index=False)
+        get_dummy_sample_project()["RR"].to_excel(writer, sheet_name="RR", index=False)
+    buffer.seek(0)
+    return buffer
+
 def get_default_fixed_costs(total_months=25):
     months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, total_months - 1)]
     return pd.DataFrame({
@@ -196,7 +225,6 @@ def migrate_month_ob(df):
         df["Áp dụng từ Tháng"] = df["Áp dụng từ Tháng"].replace("Month OB", "🔒 Month OB (Auto)")
     return df
 
-# HÀM LÕI LOAD DATA TỪ EXCEL VÀO SESSION STATE
 def load_project_from_excel(excel_data, imported_proj_name):
     found_plats = []
     for sheet in excel_data.sheet_names:
@@ -232,7 +260,6 @@ def load_project_from_excel(excel_data, imported_proj_name):
     if 'Params' in excel_data.sheet_names:
         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
 
-# HÀM ĐỒNG BỘ TỪ GOOGLE DRIVE
 @st.dialog("🔄 Đang đồng bộ từ Google Drive...", width="large")
 def sync_from_drive(folder_url):
     try:
@@ -243,22 +270,16 @@ def sync_from_drive(folder_url):
         return
 
     temp_dir = "temp_drive_sync_data"
-    if os.path.exists(temp_dir):
-        shutil.rmtree(temp_dir)
+    if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
 
     st.write("⏳ Đang kết nối và tải toàn bộ file trong thư mục. Vui lòng không đóng cửa sổ này...")
-    
     try:
-        # Tải folder public từ Google Drive
         gdown.download_folder(url=folder_url, output=temp_dir, quiet=False, use_cookies=False)
-
         excel_files = glob.glob(f"{temp_dir}/*.xlsx")
         if not excel_files:
             st.error("❌ Không tìm thấy file .xlsx nào trong thư mục. (Hoặc Thư mục Drive chưa bật Share Public).")
             return
-
-        st.success(f"✅ Đã tải xong {len(excel_files)} file. Đang nạp vào hệ thống...")
 
         success_count = 0
         for filepath in excel_files:
@@ -283,11 +304,9 @@ def sync_from_drive(folder_url):
 
     except Exception as e:
         st.error(f"❌ Đồng bộ thất bại. Vui lòng kiểm tra lại Link Drive.")
-        st.info("LƯU Ý: Thư mục Drive phải được cấp quyền 'Bất kỳ ai có liên kết đều có thể xem' (Anyone with the link).")
         st.code(str(e))
     finally:
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+        if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
 
 if "project_names" not in st.session_state:
     st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
@@ -451,7 +470,7 @@ for p in current_platforms:
 # ==========================================
 # TABS HIỂN THỊ CHÍNH
 # ==========================================
-tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp"]
+tabs_names = ["💸 Chi Phí Cố Định"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp", "📈 So Sánh & Benchmark"]
 rendered_tabs = st.tabs(tabs_names)
 
 # TAB CHI PHÍ CỐ ĐỊNH
@@ -936,8 +955,8 @@ def generate_pnl_html(res, is_usd=False):
     html += '</table></div>'
     return html
 
-# TAB CUỐI CÙNG: BÁO CÁO P&L TỔNG HỢP
-with rendered_tabs[-1]:
+# TAB BÁO CÁO P&L TỔNG HỢP
+with rendered_tabs[-2]:
     st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
     
     params = st.session_state[f"params_{cur_proj}"]
@@ -1064,3 +1083,91 @@ with rendered_tabs[-1]:
             
             st.markdown(f"### 🇺🇸 Báo Cáo P&L (USD) - *Tỷ giá: {usd_rate:,.0f} đ*")
             st.markdown(generate_pnl_html(res_usd, is_usd=True), unsafe_allow_html=True)
+
+# TAB KHO DỰ ÁN MẪU & BENCHMARK
+with rendered_tabs[-1]:
+    st.markdown(f'<div class="section-title">📈 Kho Dự Án Mẫu & Benchmark Kế Hoạch</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.info("Tính năng này giúp bạn so sánh biểu đồ Kế hoạch hiện tại với các Dự án thực tế trong quá khứ.")
+        st.download_button(
+            label="📥 Tải File Template Mẫu (Nhập số liệu thực tế)",
+            data=get_sample_template_excel(),
+            file_name="Template_Du_An_Mau_Benchmark.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+        
+        uploaded_sample = st.file_uploader("Nạp Dự án mẫu (Từ file Template):", type=["xlsx"], key="sample_uploader")
+        if uploaded_sample:
+            try:
+                sample_name = uploaded_sample.name.replace(".xlsx", "")
+                sample_xls = pd.ExcelFile(uploaded_sample)
+                st.session_state.sample_projects[sample_name] = {
+                    "Monthly Revenue": pd.read_excel(sample_xls, sheet_name="Monthly Revenue").fillna(0),
+                    "LTV": pd.read_excel(sample_xls, sheet_name="LTV").fillna(0),
+                    "RR": pd.read_excel(sample_xls, sheet_name="RR").fillna(0)
+                }
+                st.success(f"Đã nạp kho mẫu: {sample_name}")
+            except Exception as e:
+                st.error("File tải lên không đúng định dạng Template! Vui lòng tải Template mẫu về và nhập số.")
+                
+    with col2:
+        selected_samples = st.multiselect(
+            "📍 Chọn các Dự án mẫu (Thực tế) để so sánh đè lên:", 
+            options=list(st.session_state.sample_projects.keys()), 
+            default=list(st.session_state.sample_projects.keys())[0] if st.session_state.sample_projects else None
+        )
+        comp_plat = st.selectbox("Lấy chỉ số (LTV/RR) của Kế hoạch hiện tại ở nền tảng nào để so sánh?", current_platforms)
+
+    st.markdown("---")
+    
+    if f"pnl_res_{cur_proj}" not in st.session_state:
+        st.warning("⚠️ Vui lòng chuyển sang Tab 'Báo Cáo P&L Tổng Hợp' và bấm nút 'Chạy Mô Phỏng' trước khi xem biểu đồ so sánh!")
+    else:
+        # DATA PREPARATION KẾ HOẠCH
+        res_df = st.session_state[f"pnl_res_{cur_proj}"]
+        cur_rev_data = res_df['Revenue'].values
+        cur_month_labels = [f"Tháng {i+1}" for i in range(len(res_df))]
+        
+        cur_ltv_row = st.session_state[f"ltv_{comp_plat}_{cur_proj}"].iloc[0]
+        cur_ltv_data = [cur_ltv_row[c] for c in ALL_D_COLS]
+        
+        cur_rr_row = st.session_state[f"rr_{comp_plat}_{cur_proj}"].iloc[0]
+        cur_rr_data = [cur_rr_row[c] for c in ALL_RR_COLS]
+
+        # 1. BIỂU ĐỒ DOANH THU
+        st.markdown("#### 1. So Sánh Doanh Thu Hàng Tháng (Monthly Revenue)")
+        fig_rev = go.Figure()
+        fig_rev.add_trace(go.Scatter(x=cur_month_labels, y=cur_rev_data, mode='lines+markers', name=f"KH Hiện Tại ({cur_proj})", line=dict(width=4, dash='dash', color='#DC2626')))
+        for s in selected_samples:
+            s_rev = st.session_state.sample_projects[s]["Monthly Revenue"]["Doanh Thu (VNĐ)"].values
+            s_labels = [f"Tháng {i+1}" for i in range(len(s_rev))]
+            fig_rev.add_trace(go.Scatter(x=s_labels, y=s_rev, mode='lines', name=s, line=dict(width=2)))
+        fig_rev.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+        st.plotly_chart(fig_rev, use_container_width=True)
+
+        c1, c2 = st.columns(2)
+        
+        # 2. BIỂU ĐỒ RR
+        with c1:
+            st.markdown("#### 2. So Sánh Retention Rate (%)")
+            fig_rr = go.Figure()
+            fig_rr.add_trace(go.Scatter(x=ALL_RR_COLS, y=cur_rr_data, mode='lines+markers', name=f"KH Hiện Tại ({comp_plat})", line=dict(width=4, dash='dash', color='#D97706')))
+            for s in selected_samples:
+                s_rr = st.session_state.sample_projects[s]["RR"]
+                fig_rr.add_trace(go.Scatter(x=s_rr["Ngày"], y=s_rr["RR (%)"], mode='lines', name=s, line=dict(width=2)))
+            fig_rr.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+            st.plotly_chart(fig_rr, use_container_width=True)
+
+        # 3. BIỂU ĐỒ LTV
+        with c2:
+            st.markdown("#### 3. So Sánh LTV Tích Lũy (VNĐ)")
+            fig_ltv = go.Figure()
+            fig_ltv.add_trace(go.Scatter(x=ALL_D_COLS, y=cur_ltv_data, mode='lines+markers', name=f"KH Hiện Tại ({comp_plat})", line=dict(width=4, dash='dash', color='#22C55E')))
+            for s in selected_samples:
+                s_ltv = st.session_state.sample_projects[s]["LTV"]
+                fig_ltv.add_trace(go.Scatter(x=s_ltv["Ngày"], y=s_ltv["LTV (VNĐ)"], mode='lines', name=s, line=dict(width=2)))
+            fig_ltv.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
+            st.plotly_chart(fig_ltv, use_container_width=True)
