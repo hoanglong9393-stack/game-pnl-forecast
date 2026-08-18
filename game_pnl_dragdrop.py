@@ -6,9 +6,9 @@ import plotly.graph_objects as go
 import io
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-st.set_page_config(page_title="P&L forecast tool", layout="wide", page_icon="🎮")
+st.set_page_config(page_title="Game P&L Forecast Pro - Hoàng Thành Long", layout="wide", page_icon="🎮")
 
-st.title("🎮 Tool P&L by longht(VplayHN)")
+st.title("🎮 Hệ Thống Dự Phóng P&L by Hoàng Thành Long (VplayHN)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -24,6 +24,8 @@ st.markdown("""
     table.custom-pnl td:first-child { text-align: left; font-weight: 500; position: sticky; left: 0; background-color: #0F172A; z-index: 9; border-right: 2px solid #475569; }
     
     table.custom-pnl tr.row-nru td { background-color: #F59E0B; color: black; font-weight: bold; }
+    table.custom-pnl tr.row-dau td { background-color: #D97706; color: white; font-weight: bold; }
+    table.custom-pnl tr.row-mau td { background-color: #EA580C; color: white; font-weight: bold; }
     table.custom-pnl tr.row-cost td { background-color: #FBBF24; color: black; }
     table.custom-pnl tr.row-rev-total td { background-color: #DC2626; color: white; font-weight: bold; }
     table.custom-pnl tr.row-spent-header td { background-color: #94A3B8; color: black; font-weight: bold; text-align: left;}
@@ -72,6 +74,7 @@ def get_default_ob_daily(total_ob_nru, default_cpn):
     })
 
 ALL_D_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
+ALL_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"]
 ALL_D_TARGETS = [3, 7, 14, 30, 60, 90, 180, 210, 240, 270, 300, 330, 360]
 
 def get_default_ltv(is_android=True):
@@ -94,6 +97,24 @@ def get_default_ltv(is_android=True):
             "D90": [115000, 93000, 55000], "D180": [144000, 110000, 60000], "D210": [150000, 113000, 61000],
             "D240": [156000, 116000, 62000], "D270": [162000, 119000, 63000], "D300": [168000, 122000, 64000],
             "D330": [174000, 125000, 65000], "D360": [180000, 128000, 66000]
+        })
+
+def get_default_rr(is_android=True):
+    if is_android:
+        return pd.DataFrame({
+            "Phase Name": ["Phase 1 (Tháng OB)", "Phase 2 (Tháng 2&3)", "Phase 3 (Tháng 4+)"],
+            "Áp dụng từ Tháng": ["🔒 Month OB (Auto)", "Month OB+1", "Month OB+3"],
+            "D1": [40.0, 38.0, 35.0], "D3": [20.0, 18.0, 15.0], "D7": [10.0, 9.0, 8.0],
+            "D14": [7.0, 6.0, 5.0], "D30": [4.0, 3.5, 3.0], "D60": [2.0, 1.8, 1.5],
+            "D90": [1.0, 0.9, 0.8], "D180": [0.5, 0.4, 0.3], "D360": [0.1, 0.1, 0.1]
+        })
+    else:
+        return pd.DataFrame({
+            "Phase Name": ["Phase 1 (Tháng OB)", "Phase 2 (Tháng 2&3)", "Phase 3 (Tháng 4+)"],
+            "Áp dụng từ Tháng": ["🔒 Month OB (Auto)", "Month OB+1", "Month OB+3"],
+            "D1": [45.0, 43.0, 40.0], "D3": [25.0, 23.0, 20.0], "D7": [12.0, 11.0, 10.0],
+            "D14": [8.0, 7.5, 7.0], "D30": [5.0, 4.5, 4.0], "D60": [3.0, 2.8, 2.5],
+            "D90": [1.5, 1.3, 1.2], "D180": [0.8, 0.7, 0.6], "D360": [0.2, 0.2, 0.2]
         })
 
 def highlight_ob_row(row):
@@ -139,6 +160,8 @@ with st.sidebar:
                 st.session_state[f"ob_daily_iOS_{new_proj_name}"] = get_default_ob_daily(50000, 32000)
                 st.session_state[f"ltv_Android_{new_proj_name}"] = get_default_ltv(True)
                 st.session_state[f"ltv_iOS_{new_proj_name}"] = get_default_ltv(False)
+                st.session_state[f"rr_Android_{new_proj_name}"] = get_default_rr(True)
+                st.session_state[f"rr_iOS_{new_proj_name}"] = get_default_rr(False)
                 st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
                 st.session_state.current_project = new_proj_name
                 st.rerun()
@@ -167,6 +190,7 @@ with st.sidebar:
                 st.session_state[f"traffic_{new_plat}_{cur_proj}"] = get_default_traffic(months_len, False)
                 st.session_state[f"ob_daily_{new_plat}_{cur_proj}"] = get_default_ob_daily(20000, 15000)
                 st.session_state[f"ltv_{new_plat}_{cur_proj}"] = get_default_ltv(False)
+                st.session_state[f"rr_{new_plat}_{cur_proj}"] = get_default_rr(False)
                 st.success(f"Đã thêm nền tảng {new_plat}!")
                 st.rerun()
 
@@ -208,6 +232,11 @@ with st.sidebar:
                             st.session_state[f"ob_daily_{p}_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name=f'OB Daily {p}').fillna(0)
                         if f'LTV {p}' in excel_data.sheet_names:
                             st.session_state[f"ltv_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'LTV {p}').fillna(0))
+                        
+                        if f'RR {p}' in excel_data.sheet_names:
+                            st.session_state[f"rr_{p}_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name=f'RR {p}').fillna(0))
+                        else:
+                            st.session_state[f"rr_{p}_{imported_proj_name}"] = get_default_rr(p=="Android")
                             
                     if 'Params' in excel_data.sheet_names:
                         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
@@ -246,6 +275,7 @@ for p in current_platforms:
     if f"traffic_{p}_{cur_proj}" not in st.session_state: st.session_state[f"traffic_{p}_{cur_proj}"] = get_default_traffic(25, p=="Android")
     if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
     if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
+    if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
 
 # ==========================================
 # CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
@@ -297,7 +327,7 @@ with rendered_tabs[0]:
         st.session_state[f"fixed_costs_{cur_proj}"] = edited_fc
         st.rerun()
 
-# CÁC TAB NỀN TẢNG (TRAFFIC & LTV)
+# CÁC TAB NỀN TẢNG (TRAFFIC, RR & LTV)
 for idx, p in enumerate(current_platforms):
     with rendered_tabs[idx + 1]:
         col_title, col_btn = st.columns([4, 1])
@@ -347,8 +377,20 @@ for idx, p in enumerate(current_platforms):
                 st.rerun()
 
         st.markdown("---")
-        st.markdown(f"**2. Cấu Hình LTV Curve & Hệ Số K - {p}**")
+        st.markdown(f"**2. Cấu Hình Retention Rate (RR %) - {p}**")
         month_options = df_p["Tháng"].tolist()
+        
+        col_cfg_rr = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
+        for c in ALL_RR_COLS: col_cfg_rr[c] = st.column_config.NumberColumn(f"{c} (%)", format="%.2f", min_value=0.0, max_value=100.0)
+        
+        edited_rr = st.data_editor(
+            st.session_state[f"rr_{p}_{cur_proj}"], num_rows="dynamic", use_container_width=True, hide_index=True, column_config=col_cfg_rr, key=f"ed_rr_{p}_{cur_proj}"
+        )
+        if not edited_rr.astype(str).equals(st.session_state[f"rr_{p}_{cur_proj}"].astype(str)):
+            st.session_state[f"rr_{p}_{cur_proj}"] = edited_rr
+
+        st.markdown("---")
+        st.markdown(f"**3. Cấu Hình LTV Curve & Hệ Số K - {p}**")
         col_cfg = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
         for c in ALL_D_COLS: col_cfg[c] = st.column_config.NumberColumn(f"{c} (VNĐ)", format="%d", min_value=0)
         
@@ -379,6 +421,84 @@ def create_daily_ltv_curve(anchor_points):
     last_val = anchor_points[last_day]
     full_curve[last_day:max_day+1] = last_val
     return full_curve
+
+def create_daily_rr_curve(anchor_points):
+    days = sorted(anchor_points.keys())
+    max_day = 720
+    full_curve = np.zeros(max_day + 1)
+    for i in range(len(days) - 1):
+        d_start, d_end = days[i], days[i+1]
+        v_start, v_end = anchor_points[d_start] / 100.0, anchor_points[d_end] / 100.0
+        full_curve[d_start:d_end+1] = np.linspace(v_start, v_end, d_end - d_start + 1)
+    last_day = days[-1]
+    last_val = anchor_points[last_day] / 100.0
+    full_curve[last_day:max_day+1] = last_val
+    return full_curve
+
+def calculate_platform_dau_phase_mapping(df_traffic, df_ob_daily, df_rr):
+    num_months = len(df_traffic)
+    rr_mapping = {}
+    for _, row in df_rr.iterrows():
+        try:
+            anchors = {0: 100.0} # D0 RR is 100%
+            for c in ALL_RR_COLS:
+                if c in row and not pd.isna(row[c]):
+                    anchors[int(c[1:])] = float(row[c])
+            curve = create_daily_rr_curve(anchors)
+            if row['Áp dụng từ Tháng'] in df_traffic['Tháng'].values:
+                rr_mapping[row['Áp dụng từ Tháng']] = curve
+        except: pass
+        
+    latest_curve = np.zeros(721)
+    active_curve = latest_curve
+    month_curves = []
+    for m in df_traffic['Tháng']:
+        if m in rr_mapping: active_curve = rr_mapping[m]
+        month_curves.append(active_curve)
+        
+    daily_nru_list = []
+    daily_curve_list = []
+    
+    for m_idx, row in df_traffic.iterrows():
+        if row['Tháng'] == "🔒 Month OB (Auto)":
+            ob_nrus = df_ob_daily["NRU (Users)"].astype(float).values
+            for d in range(30):
+                daily_nru_list.append(ob_nrus[d] if d < len(ob_nrus) else 0.0)
+                daily_curve_list.append(month_curves[m_idx])
+        else:
+            nru_daily = float(row['NRU']) / 30.0
+            for d in range(30):
+                daily_nru_list.append(nru_daily)
+                daily_curve_list.append(month_curves[m_idx])
+                
+    total_days = len(daily_nru_list)
+    daily_dau = np.zeros(total_days)
+    
+    for c_day in range(total_days):
+        c_nru = daily_nru_list[c_day]
+        if c_nru <= 0: continue
+        c_curve = daily_curve_list[c_day]
+        for age in range(min(len(c_curve), total_days - c_day)):
+            daily_dau[c_day + age] += c_nru * c_curve[age]
+            
+    peak_dau_arr = np.array([np.max(daily_dau[i*30:(i+1)*30]) for i in range(num_months)])
+    
+    mau_arr = np.zeros(num_months)
+    for m in range(num_months):
+        nru_m = np.sum(daily_nru_list[m*30:(m+1)*30])
+        mau_m = nru_m
+        mid_month_day = m*30 + 15
+        for past_d in range(m*30):
+            c_nru = daily_nru_list[past_d]
+            if c_nru <= 0: continue
+            c_curve = daily_curve_list[past_d]
+            age = mid_month_day - past_d
+            if age < len(c_curve):
+                mr = min(c_curve[age] * 2.0, 1.0)
+                mau_m += c_nru * mr
+        mau_arr[m] = mau_m
+        
+    return peak_dau_arr, mau_arr
 
 def calculate_platform_rev_phase_mapping(df_traffic, df_ob_daily, df_ltv):
     num_months = len(df_traffic)
@@ -433,7 +553,7 @@ def format_cell_value(val, is_pct=False, is_usd=False):
 
 def format_pnl_for_excel(res):
     metrics = [
-        'NRU', 'CPN', 'Revenue', 
+        'NRU', 'Peak DAU', 'MAU', 'CPN', 'Revenue', 
         'Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding',
         'Revenue share dev', 'VAT', 'Payment channel fee',
         'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận', 'Tỷ Trọng MKT/REV'
@@ -443,6 +563,8 @@ def format_pnl_for_excel(res):
     totals = []
     for m in metrics:
         if m == 'NRU': totals.append(res['NRU'].sum())
+        elif m == 'Peak DAU': totals.append(res['Peak DAU'].max())
+        elif m == 'MAU': totals.append(res['MAU'].max())
         elif m == 'CPN': 
             t_nru = res['NRU'].sum()
             t_mkt = res['Marketing (UA+Tax)'].sum() + res['LF + Branding'].sum()
@@ -464,7 +586,6 @@ def format_pnl_for_excel(res):
     df_with_kpi = pd.DataFrame([[""] + ["KPI"] * (len(df_export.columns) - 1)], columns=df_export.columns)
     df_export = pd.concat([df_with_kpi, df_export], ignore_index=True)
     
-    # Rename rows for exact matching with styling logic
     df_export['Dashboard'] = df_export['Dashboard'].replace('NRU', 'New Registed User')
     return df_export
 
@@ -481,20 +602,29 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
             tr = st.session_state[f"traffic_{p}_{cur_proj}"].copy()
             tr["Tháng"] = tr["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
             ltv = st.session_state[f"ltv_{p}_{cur_proj}"].copy()
+            rr_exp = st.session_state[f"rr_{p}_{cur_proj}"].copy()
+            
             if "Áp dụng từ Tháng" in ltv.columns:
                 ltv["Áp dụng từ Tháng"] = ltv["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+            if "Áp dụng từ Tháng" in rr_exp.columns:
+                rr_exp["Áp dụng từ Tháng"] = rr_exp["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
             
             tr.to_excel(writer, sheet_name=p, startrow=1, index=False)
             ws = writer.sheets[p]
             ws.cell(row=1, column=1, value=f"KẾ HOẠCH TRAFFIC - {p}").font = Font(bold=True)
             
-            r_idx = len(tr) + 4
-            ws.cell(row=r_idx, column=1, value=f"CẤU HÌNH LTV - {p}").font = Font(bold=True)
-            ltv.to_excel(writer, sheet_name=p, startrow=r_idx, index=False)
+            r_idx_rr = len(tr) + 4
+            ws.cell(row=r_idx_rr, column=1, value=f"CẤU HÌNH RETENTION RATE (RR %) - {p}").font = Font(bold=True)
+            rr_exp.to_excel(writer, sheet_name=p, startrow=r_idx_rr, index=False)
+            
+            r_idx_ltv = r_idx_rr + len(rr_exp) + 3
+            ws.cell(row=r_idx_ltv, column=1, value=f"CẤU HÌNH LTV - {p}").font = Font(bold=True)
+            ltv.to_excel(writer, sheet_name=p, startrow=r_idx_ltv, index=False)
 
-        # Định nghĩa MÀU SẮC cực chuẩn theo giao diện Web
         fill_header = PatternFill(start_color="0B3E45", end_color="0B3E45", fill_type="solid")
         fill_nru = PatternFill(start_color="F59E0B", end_color="F59E0B", fill_type="solid")
+        fill_dau = PatternFill(start_color="D97706", end_color="D97706", fill_type="solid")
+        fill_mau = PatternFill(start_color="EA580C", end_color="EA580C", fill_type="solid")
         fill_cpn = PatternFill(start_color="FBBF24", end_color="FBBF24", fill_type="solid")
         fill_rev_cost = PatternFill(start_color="DC2626", end_color="DC2626", fill_type="solid")
         fill_spent = PatternFill(start_color="94A3B8", end_color="94A3B8", fill_type="solid")
@@ -509,28 +639,29 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
         
         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
 
-        # Áp dụng Format cho bảng P&L (VNĐ và USD)
         for sheet_name in ['P&L Tổng Hợp (VNĐ)', 'P&L (USD)']:
             ws = writer.book[sheet_name]
             
-            # Đổ màu Dòng Header
             for cell in ws[1]:
                 cell.fill = fill_header
                 cell.font = font_white_bold
                 cell.alignment = Alignment(horizontal="center", vertical="center")
                 cell.border = thin_border
                 
-            # Đổ màu theo giá trị ở cột đầu tiên (Cột Dashboard)
             for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
                 row_label = str(row[0].value)
-                
-                # Mặc định là trắng chữ đen
                 current_fill = fill_white
                 current_font = font_black
                 
                 if row_label == 'New Registed User':
                     current_fill = fill_nru
                     current_font = font_black_bold
+                elif row_label == 'Peak DAU':
+                    current_fill = fill_dau
+                    current_font = font_white_bold
+                elif row_label == 'MAU':
+                    current_fill = fill_mau
+                    current_font = font_white_bold
                 elif row_label == 'CPN':
                     current_fill = fill_cpn
                 elif row_label in ['Revenue', 'Tổng Chi Phí']:
@@ -548,7 +679,6 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                     cell_font = current_font
                     cell_fill = current_fill
                     
-                    # Nếu là Lợi Nhuận > 0 thì tô xanh lá cây chữ trắng giống Web
                     if row_label in ['Lợi nhuận tháng', 'Lợi Nhuận'] and idx > 0:
                         if isinstance(cell.value, (int, float)) and cell.value > 0:
                             cell_fill = fill_profit_pos
@@ -558,10 +688,8 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                     cell.font = cell_font
                     cell.border = thin_border
                     
-                    # Fix cột và hàng (Đóng băng dòng Header & 2 cột Dashboard + Total)
                     ws.freeze_panes = 'C3'
                     
-                    # Fomat số VNĐ hoặc USD
                     if idx > 0 and isinstance(cell.value, (int, float)):
                         if "Tỷ Trọng" in row_label:
                             cell.number_format = '0.00%'
@@ -570,7 +698,6 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                         else:
                             cell.number_format = '#,##0'
 
-        # Căn lề tự động kích thước cột
         for sheet_name in writer.book.sheetnames:
             ws = writer.book[sheet_name]
             for col in ws.columns:
@@ -602,6 +729,14 @@ def generate_pnl_html(res, is_usd=False):
     
     html += f'<tr class="row-nru"><td>New Registed User</td><td>{format_cell_value(total_nru)}</td>'
     for v in res['NRU']: html += f'<td>{format_cell_value(v)}</td>'
+    html += '</tr>'
+
+    html += f'<tr class="row-dau"><td>Peak DAU</td><td>{format_cell_value(res["Peak DAU"].max())}</td>'
+    for v in res['Peak DAU']: html += f'<td>{format_cell_value(v)}</td>'
+    html += '</tr>'
+    
+    html += f'<tr class="row-mau"><td>MAU</td><td>{format_cell_value(res["MAU"].max())}</td>'
+    for v in res['MAU']: html += f'<td>{format_cell_value(v)}</td>'
     html += '</tr>'
     
     html += f'<tr class="row-cost"><td>CPN</td><td>{format_cell_value(cpn_total, is_usd=is_usd)}</td>'
@@ -666,6 +801,8 @@ with rendered_tabs[-1]:
             res['Tháng'] = display_months
             
             total_nru_arr = np.zeros(len(res))
+            total_peak_dau_arr = np.zeros(len(res))
+            total_mau_arr = np.zeros(len(res))
             total_mkt_arr = np.zeros(len(res))
             total_rev_arr = np.zeros(len(res))
             comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
@@ -674,8 +811,8 @@ with rendered_tabs[-1]:
                 tr_df = st.session_state[f"traffic_{p}_{cur_proj}"]
                 ob_df = st.session_state[f"ob_daily_{p}_{cur_proj}"]
                 ltv_df = st.session_state[f"ltv_{p}_{cur_proj}"]
+                rr_df = st.session_state[f"rr_{p}_{cur_proj}"]
                 
-                # Tích hợp số Comeback vào ngày 1 của OB df logic
                 pre_nru = float(tr_df.loc[tr_df['Tháng'] == 'Pre-launch', 'NRU'].sum())
                 ob_calc = ob_df.copy()
                 if len(ob_calc) > 0:
@@ -695,7 +832,13 @@ with rendered_tabs[-1]:
                 total_mkt_arr += np.array(p_mkt)
                 total_rev_arr += calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
                 
+                p_peak_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
+                total_peak_dau_arr += p_peak_dau
+                total_mau_arr += p_mau
+                
             res['NRU'] = total_nru_arr
+            res['Peak DAU'] = total_peak_dau_arr
+            res['MAU'] = total_mau_arr
             res['Marketing (UA+Tax)'] = total_mkt_arr
             res['Revenue'] = total_rev_arr
             
@@ -717,16 +860,13 @@ with rendered_tabs[-1]:
             res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, res['Marketing (UA+Tax)'] / res['Revenue'], 0.0)
             st.session_state[f"pnl_res_{cur_proj}"] = res
             
-            # Khởi tạo DataFrame cho USD
             res_usd = res.copy()
             usd_rate = float(params.get('usd_rate', 25400.0))
             monetary_cols = ['Marketing (UA+Tax)', 'Revenue', 'Nhân sự', 'Server', 'LF + Branding', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
             for col in monetary_cols: res_usd[col] = res_usd[col] / usd_rate
             
-            # TẠO GIAO DIỆN 2 NÚT TẢI XUỐNG
             col_down1, col_down2 = st.columns(2)
             
-            # NÚT 1: TẢI FILE CẤU HÌNH INPUT (DỮ LIỆU THÔ ĐỂ NẠP LẠI VÀO PHẦN MỀM)
             buffer_input = io.BytesIO()
             with pd.ExcelWriter(buffer_input, engine='openpyxl') as writer:
                 fc_export = fixed_costs.copy()
@@ -737,11 +877,16 @@ with rendered_tabs[-1]:
                     tr_exp = st.session_state[f"traffic_{p}_{cur_proj}"].copy()
                     tr_exp["Tháng"] = tr_exp["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
                     ltv_exp = st.session_state[f"ltv_{p}_{cur_proj}"].copy()
+                    rr_exp = st.session_state[f"rr_{p}_{cur_proj}"].copy()
+                    
                     if "Áp dụng từ Tháng" in ltv_exp.columns:
                         ltv_exp["Áp dụng từ Tháng"] = ltv_exp["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                    if "Áp dụng từ Tháng" in rr_exp.columns:
+                        rr_exp["Áp dụng từ Tháng"] = rr_exp["Áp dụng từ Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
                         
                     tr_exp.to_excel(writer, sheet_name=f'Traffic {p}', index=False)
                     st.session_state[f"ob_daily_{p}_{cur_proj}"].to_excel(writer, sheet_name=f'OB Daily {p}', index=False)
+                    rr_exp.to_excel(writer, sheet_name=f'RR {p}', index=False)
                     ltv_exp.to_excel(writer, sheet_name=f'LTV {p}', index=False)
                 pd.DataFrame([params]).to_excel(writer, sheet_name='Params', index=False)
             buffer_input.seek(0)
@@ -751,7 +896,6 @@ with rendered_tabs[-1]:
                 file_name=f"PNL_{cur_proj}_Input.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
             
-            # NÚT 2: TẢI BÁO CÁO P&L (FORMAT ĐẸP ĐỂ XEM/BÁO CÁO SẾP)
             buffer_report = generate_report_excel(res, res_usd, current_platforms, cur_proj)
             col_down2.download_button(
                 label=f"📊 Tải Báo Cáo P&L & Cấu Hình (Excel)", data=buffer_report,
