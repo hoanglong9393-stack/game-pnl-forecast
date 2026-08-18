@@ -8,7 +8,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
 
-st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
+st.title("🎮 Game P&L Forecast Tool - longht (Vplay)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
