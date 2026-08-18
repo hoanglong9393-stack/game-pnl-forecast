@@ -13,9 +13,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 # ==========================================
 # CẤU HÌNH THƯ MỤC GOOGLE DRIVE CỦA TEAM (HARDCODE)
 # ==========================================
-# Ông hãy thay link thư mục Drive public của team vào giữa 2 dấu nháy kép dưới đây:
 TEAM_DRIVE_URL = "https://drive.google.com/drive/folders/1XvPdexOCJ7Pbkyz6J67eyYA7c_O8k0lV?usp=sharing"
-
 
 st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
 st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
@@ -414,6 +412,20 @@ with st.sidebar:
             st.info("Không thể xóa dự án duy nhất.")
 
     st.markdown("---")
+    st.header("☁️ Đồng Bộ Kho Team (Drive)")
+    st.info("Hệ thống đã được liên kết với Kho dữ liệu nội bộ của Team. Bấm nút dưới để nạp toàn bộ dự án mẫu mới nhất.")
+    
+    if not st.session_state.drive_synced:
+        if st.button("🔄 Nạp Dữ Liệu Từ Kho Team", type="primary", use_container_width=True):
+            if TEAM_DRIVE_URL and TEAM_DRIVE_URL != "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive":
+                sync_from_drive(TEAM_DRIVE_URL)
+            else:
+                st.warning("⚠️ Chưa cấu hình Link Google Drive. Vui lòng sửa biến TEAM_DRIVE_URL trong mã nguồn (dòng số 16) trước khi dùng tính năng này!")
+    else:
+        st.success("✅ Đã đồng bộ Kho Team trong phiên làm việc này!")
+        st.caption("🔄 Nhấn F5 (Tải lại trang web) nếu bạn muốn nạp lại dữ liệu mới.")
+
+    st.markdown("---")
     st.header("📱 Quản Lý Nền Tảng / Thị Trường")
     with st.expander("➕ Thêm Nền Tảng Mới"):
         new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Global):")
@@ -430,7 +442,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.header("📤 DATA HUB (Nạp Kế Hoạch & Thực Tế)")
-    st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx).")
+    st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx) từ máy tính.")
     
     st.download_button(
         label="📥 Tải Template Nhập Số Thực Tế",
@@ -467,20 +479,6 @@ with st.sidebar:
                 st.success(f"Đã nạp xong {len(uploaded_files)} file!")
                 time.sleep(1.5)
                 st.rerun()
-
-    st.markdown("---")
-    st.header("☁️ Đồng Bộ Kho Team (Drive)")
-    st.info("Hệ thống đã được liên kết với Kho dữ liệu nội bộ của Team. Bấm nút dưới để nạp toàn bộ dự án mẫu mới nhất.")
-    
-    if not st.session_state.drive_synced:
-        if st.button("🔄 Nạp Dữ Liệu Từ Kho Team", type="primary", use_container_width=True):
-            if TEAM_DRIVE_URL and TEAM_DRIVE_URL != "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive":
-                sync_from_drive(TEAM_DRIVE_URL)
-            else:
-                st.warning("⚠️ Chưa cấu hình Link Google Drive. Vui lòng sửa biến TEAM_DRIVE_URL trong mã nguồn (dòng số 15) trước khi dùng tính năng này!")
-    else:
-        st.success("✅ Đã đồng bộ Kho Team trong phiên làm việc này!")
-        st.caption("🔄 Nhấn F5 (Tải lại trang web) nếu bạn muốn nạp lại dữ liệu mới.")
 
     st.markdown("---")
     st.header("⚙️ Cấu Hình Tham Số Chung")
