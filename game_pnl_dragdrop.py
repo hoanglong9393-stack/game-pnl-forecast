@@ -131,12 +131,14 @@ def get_dummy_sample_project():
         "Android": {
             "NRU": pd.DataFrame({"Tháng": labels_12, "NRU": [80000, 40000, 20000, 15000, 10000, 10000, 8000, 8000, 6000, 5000, 5000, 4000]}),
             "Revenue": pd.DataFrame({"Tháng": labels_12, "Doanh Thu (VNĐ)": [8e9, 6e9, 4e9, 3e9, 2.5e9, 2e9, 1.8e9, 1.5e9, 1.2e9, 1e9, 0.8e9, 0.5e9]}),
+            "CPN": pd.DataFrame({"Tháng": labels_12, "CPN (VNĐ)": [15000, 25000, 25000, 25000, 25000, 25000, 25000, 25000, 25000, 25000, 25000, 25000]}),
             "LTV": pd.DataFrame({"Ngày": ALL_D_COLS, "LTV (VNĐ)": [10000, 15000, 30000, 45000, 60000, 75000, 90000, 110000, 115000, 120000, 125000, 130000, 135000, 140000]}),
             "RR": pd.DataFrame({"Ngày": ALL_RR_COLS, "RR (%)": [40.0, 20.0, 10.0, 6.0, 3.5, 1.5, 0.8, 0.4, 0.1]})
         },
         "iOS": {
             "NRU": pd.DataFrame({"Tháng": labels_12, "NRU": [40000, 20000, 10000, 8000, 5000, 5000, 4000, 4000, 3000, 2500, 2500, 2000]}),
             "Revenue": pd.DataFrame({"Tháng": labels_12, "Doanh Thu (VNĐ)": [4e9, 3e9, 2e9, 1.5e9, 1.2e9, 1e9, 0.9e9, 0.7e9, 0.6e9, 0.5e9, 0.4e9, 0.3e9]}),
+            "CPN": pd.DataFrame({"Tháng": labels_12, "CPN (VNĐ)": [20000, 32000, 32000, 32000, 32000, 32000, 32000, 32000, 32000, 32000, 32000, 32000]}),
             "LTV": pd.DataFrame({"Ngày": ALL_D_COLS, "LTV (VNĐ)": [15000, 25000, 45000, 65000, 85000, 105000, 120000, 150000, 155000, 160000, 165000, 170000, 175000, 180000]}),
             "RR": pd.DataFrame({"Ngày": ALL_RR_COLS, "RR (%)": [45.0, 25.0, 12.0, 8.0, 5.0, 3.0, 1.5, 0.8, 0.2]})
         }
@@ -154,6 +156,7 @@ def get_sample_template_excel():
         for p, data in dummy.items():
             data["NRU"].to_excel(writer, sheet_name=f"NRU {p}", index=False)
             data["Revenue"].to_excel(writer, sheet_name=f"Revenue {p}", index=False)
+            data["CPN"].to_excel(writer, sheet_name=f"CPN {p}", index=False)
             data["LTV"].to_excel(writer, sheet_name=f"LTV {p}", index=False)
             data["RR"].to_excel(writer, sheet_name=f"RR {p}", index=False)
     buffer.seek(0)
@@ -172,6 +175,11 @@ def load_sample_project(excel_data, sample_name):
             "LTV": pd.read_excel(excel_data, f"LTV {p}").fillna(0),
             "RR": pd.read_excel(excel_data, f"RR {p}").fillna(0)
         }
+        if f"CPN {p}" in excel_data.sheet_names:
+            project_data[p]["CPN"] = pd.read_excel(excel_data, f"CPN {p}").fillna(0)
+        else:
+            project_data[p]["CPN"] = pd.DataFrame()
+            
     st.session_state.sample_projects[sample_name] = project_data
 
 def get_default_fixed_costs(total_months=25):
@@ -351,6 +359,36 @@ def sync_from_drive(folder_url):
     finally:
         if os.path.exists(temp_dir): shutil.rmtree(temp_dir)
 
+def generate_cpn_compare_html(cur_cpn, s_cpn, labels, s_name, cur_name):
+    html = '<div class="dataframe-container"><table class="custom-pnl" style="width:100%; margin-bottom: 20px;">'
+    html += f'<tr><th style="text-align:center;">Tháng</th><th>CPN Kế Hoạch ({cur_name})</th><th>CPN Thực Tế ({s_name})</th><th style="text-align:center;">Chênh lệch (%)</th></tr>'
+    for i in range(len(labels)):
+        c_val = cur_cpn[i] if i < len(cur_cpn) else 0
+        s_val = s_cpn[i] if i < len(s_cpn) else 0
+        
+        if s_val > 0:
+            diff = (c_val - s_val) / s_val
+            diff_str = f"{diff*100:+.2f}%"
+            # Cost is lower -> good (green), Cost is higher -> bad (red)
+            if diff < 0:
+                color = "#22C55E" 
+            elif diff > 0:
+                color = "#DC2626" 
+            else:
+                color = "white"
+        else:
+            diff_str = "-"
+            color = "white"
+            
+        html += f'<tr>'
+        html += f'<td style="text-align:center;">{labels[i]}</td>'
+        html += f'<td>{c_val:,.0f}</td>'
+        html += f'<td>{s_val:,.0f}</td>'
+        html += f'<td style="color:{color}; font-weight:bold; text-align:center;">{diff_str}</td>'
+        html += f'</tr>'
+    html += '</table></div>'
+    return html
+
 if "project_names" not in st.session_state:
     st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
     st.session_state.current_project = "T037"
@@ -433,7 +471,6 @@ with st.sidebar:
                 st.session_state[f"rr_iOS_{new_proj_name}"] = get_default_rr(False)
                 st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
                 
-                # Init custom revenue for new project
                 months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, new_proj_months - 1)]
                 st.session_state[f"custom_revenue_{new_proj_name}"] = pd.DataFrame({"Tháng": months_label, "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0] * len(months_label)})
                 
@@ -1298,3 +1335,18 @@ with rendered_tabs[-1]:
                         fig_ltv.add_trace(go.Scatter(x=s_ltv_filtered["Ngày"], y=s_ltv_filtered["LTV (VNĐ)"], mode='lines', name=s, line=dict(width=2)))
                 fig_ltv.update_layout(title=f"LTV Tích lũy (VNĐ) - {p}", height=350, margin=dict(l=20, r=20, t=40, b=20), hovermode="x unified")
                 st.plotly_chart(fig_ltv, use_container_width=True)
+                
+            # BẢNG SO SÁNH CPN
+            for s in selected_samples:
+                if p in st.session_state.sample_projects[s]:
+                    s_cpn_df = st.session_state.sample_projects[s][p].get("CPN")
+                    if s_cpn_df is not None and not s_cpn_df.empty:
+                        s_cpn_data = s_cpn_df["CPN (VNĐ)"].values
+                        cur_cpn_data = st.session_state[f"traffic_{p}_{cur_proj}"]["CPN (VNĐ)"].values
+                        
+                        max_len_cpn = max(len(cur_cpn_data), len(s_cpn_data))
+                        labels_cpn = get_chart_month_labels(max_len_cpn)
+                        
+                        st.markdown(f"**Bảng So Sánh CPN - {p} (Kế Hoạch vs {s})**")
+                        html_table = generate_cpn_compare_html(cur_cpn_data, s_cpn_data, labels_cpn, s, cur_proj)
+                        st.markdown(html_table, unsafe_allow_html=True)
