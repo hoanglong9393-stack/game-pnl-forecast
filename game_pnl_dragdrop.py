@@ -1115,6 +1115,21 @@ with rendered_tabs[-2]:
             res['Lợi nhuận tháng'] = res['Revenue'] - res['Tổng Chi Phí']
             res['Lợi Nhuận'] = res['Lợi nhuận tháng'].cumsum()
             res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, res['Marketing (UA+Tax)'] / res['Revenue'], 0.0)
+            
+            # --- CUSTOM MKT/REV FOR MONTH OB ---
+            if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
+                idx_pre = res.index[res['Tháng'] == 'PRE-LAUNCH'][0]
+                idx_ob = res.index[res['Tháng'] == 'MONTH OB'][0]
+                
+                mkt_pre = res.at[idx_pre, 'Marketing (UA+Tax)']
+                mkt_ob = res.at[idx_ob, 'Marketing (UA+Tax)']
+                brand_ob = res.at[idx_ob, 'LF + Branding']
+                rev_ob = res.at[idx_ob, 'Revenue']
+                
+                if rev_ob > 0:
+                    res.at[idx_ob, 'Tỷ Trọng MKT/REV'] = (mkt_pre + mkt_ob + brand_ob) / rev_ob
+            # -----------------------------------
+            
             st.session_state[f"pnl_res_{cur_proj}"] = res
             
             res_usd = res.copy()
