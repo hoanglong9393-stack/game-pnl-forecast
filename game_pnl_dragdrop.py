@@ -95,15 +95,15 @@ Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể t�
 **Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
 👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này không làm tăng thêm chi phí Marketing của tháng OB.
 
-**Q2: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
+**Q2: Làm sao để ghi đè (Hardcode) Doanh thu thực tế của các tháng cũ cho khớp số?**
+👉 Để đảm bảo màn hình Tool gọn gàng, tính năng ghi đè doanh thu được chạy ngầm. Bạn hãy tải file **Cấu hình Input** về máy, mở sheet **"Custom Revenue"**, nhập doanh thu thực tế vào tháng bạn muốn ghi đè rồi up lại lên Tool. Tool sẽ tự ưu tiên lấy số đó để tính toán Profit, Rev Share, VAT... thay vì công thức NRU x LTV mặc định.
+
+**Q3: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
 👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu.
 
-**Q3: Peak DAU và MAU mang ý nghĩa gì?**
+**Q4: Peak DAU và MAU mang ý nghĩa gì?**
 *   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
 *   **MAU:** Tổng số lượng User duy nhất (Unique) vào game trong tháng.
-
-**Q4: NRU giảm mạnh vào nửa cuối tháng OB, tại sao DAU vẫn cao hoặc lại tăng lên?**
-👉 Đây là "Hiệu ứng tích lũy Cohort" nhờ tỷ lệ giữ chân (Retention). Lượng người cũ từ những ngày ra mắt đầu tiên quay lại đăng nhập đủ lớn để bù đắp sự sụt giảm NRU mua mới.
 """
 
 @st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
@@ -289,6 +289,13 @@ def load_project_from_excel(excel_data, imported_proj_name):
             
     if 'Params' in excel_data.sheet_names:
         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
+        
+    # NẠP CUSTOM REVENUE (TÀNG HÌNH)
+    if 'Custom Revenue' in excel_data.sheet_names:
+        st.session_state[f"custom_revenue_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Custom Revenue').fillna(0))
+    else:
+        fc = st.session_state[f"fixed_costs_{imported_proj_name}"]
+        st.session_state[f"custom_revenue_{imported_proj_name}"] = pd.DataFrame({"Tháng": fc["Tháng"].tolist(), "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0]*len(fc)})
 
 @st.dialog("🔄 Đang đồng bộ từ Google Drive...", width="large")
 def sync_from_drive(folder_url):
@@ -333,7 +340,7 @@ def sync_from_drive(folder_url):
 
         if success_pnl > 0 or success_real > 0:
             if success_pnl > 0: st.session_state.current_project = st.session_state.project_names[-1]
-            st.session_state.drive_synced = True # ĐÁNH DẤU LÀ ĐÃ SYNC XONG TRONG PHIÊN NÀY
+            st.session_state.drive_synced = True 
             st.success(f"🎉 Đồng bộ thành công: {success_pnl} Dự phóng Kế hoạch | {success_real} Kho mẫu Thực tế!")
             time.sleep(2)
             st.rerun()
@@ -368,6 +375,10 @@ for p in current_platforms:
     if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
     if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
     if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
+
+if f"custom_revenue_{cur_proj}" not in st.session_state:
+    fc = st.session_state[f"fixed_costs_{cur_proj}"]
+    st.session_state[f"custom_revenue_{cur_proj}"] = pd.DataFrame({"Tháng": fc["Tháng"].tolist(), "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0]*len(fc)})
 
 # ==========================================
 # CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
@@ -421,6 +432,11 @@ with st.sidebar:
                 st.session_state[f"rr_Android_{new_proj_name}"] = get_default_rr(True)
                 st.session_state[f"rr_iOS_{new_proj_name}"] = get_default_rr(False)
                 st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
+                
+                # Init custom revenue for new project
+                months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, new_proj_months - 1)]
+                st.session_state[f"custom_revenue_{new_proj_name}"] = pd.DataFrame({"Tháng": months_label, "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0] * len(months_label)})
+                
                 st.session_state.current_project = new_proj_name
                 st.rerun()
 
@@ -1059,6 +1075,18 @@ with rendered_tabs[-2]:
                 global_daily_dau += p_daily_dau
                 total_mau_arr += p_mau
                 
+            custom_rev_df = st.session_state.get(f"custom_revenue_{cur_proj}")
+            if custom_rev_df is not None and not custom_rev_df.empty:
+                c_map = dict(zip(custom_rev_df['Tháng'].replace("🔒 Month OB (Auto)", "Month OB"), custom_rev_df['Doanh Thu Tùy Chỉnh (VNĐ)']))
+                for i, m in enumerate(display_months):
+                    val = c_map.get(m, 0.0)
+                    try:
+                        val = float(val)
+                        if val > 0:
+                            total_rev_arr[i] = val
+                    except:
+                        pass
+                        
             res['NRU'] = total_nru_arr
             
             peak_daus = []
@@ -1101,6 +1129,11 @@ with rendered_tabs[-2]:
                 fc_export = fixed_costs.copy()
                 fc_export["Tháng"] = fc_export["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
                 fc_export.to_excel(writer, sheet_name='Fixed Costs', index=False)
+                
+                custom_rev_exp = st.session_state[f"custom_revenue_{cur_proj}"].copy()
+                if "Tháng" in custom_rev_exp.columns:
+                    custom_rev_exp["Tháng"] = custom_rev_exp["Tháng"].replace("🔒 Month OB (Auto)", "Month OB")
+                custom_rev_exp.to_excel(writer, sheet_name='Custom Revenue', index=False)
                 
                 for p in current_platforms:
                     tr_exp = st.session_state[f"traffic_{p}_{cur_proj}"].copy()
@@ -1165,7 +1198,6 @@ with rendered_tabs[-1]:
         cur_total_nru = res_df['NRU'].values
         cur_total_rev = res_df['Revenue'].values
         
-        # Tính max_len cho trục X để chuẩn hóa
         max_len = len(res_df)
         sample_totals = {}
         for s in selected_samples:
@@ -1205,7 +1237,6 @@ with rendered_tabs[-1]:
         fig_nru.update_layout(xaxis=dict(tickmode='array', tickvals=x_ticks, ticktext=labels_x), height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified")
         st.plotly_chart(fig_nru, use_container_width=True)
 
-        # 3, 4, 5... PER PLATFORM RR & LTV
         ordered_plats = []
         if "iOS" in current_platforms: ordered_plats.append("iOS")
         if "Android" in current_platforms: ordered_plats.append("Android")
@@ -1221,7 +1252,6 @@ with rendered_tabs[-1]:
             st.markdown(f"#### {idx_sec}. So Sánh Retention Rate & LTV - Nền tảng {p}")
             idx_sec += 1
             
-            # GIỚI HẠN HIỂN THỊ ĐỂ BIỂU ĐỒ TRỰC QUAN HƠN
             DISPLAY_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90"]
             DISPLAY_LTV_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180"]
             
