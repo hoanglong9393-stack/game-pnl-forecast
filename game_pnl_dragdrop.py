@@ -1029,7 +1029,8 @@ with rendered_tabs[-2]:
     with col_t1:
         st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
     with col_t2:
-        st.markdown('<button onclick="window.print()" style="width:100%; padding: 8px; background-color: #3B82F6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">🖨️ In Báo Cáo / Lưu PDF</button>', unsafe_allow_html=True)
+        if st.button("🖨️ In Báo Cáo / Lưu PDF", use_container_width=True, type="secondary"):
+            st.components.v1.html("<script>window.parent.print();</script>", height=0)
     
     params = st.session_state[f"params_{cur_proj}"]
     fixed_costs = st.session_state[f"fixed_costs_{cur_proj}"]
