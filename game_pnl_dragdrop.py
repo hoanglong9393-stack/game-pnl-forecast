@@ -48,12 +48,14 @@ st.markdown("""
     
     /* STYLE DÀNH CHO KHI BẤM IN PDF (Sếp Mode) */
     @media print {
-        .stSidebar, header, button { display: none !important; }
+        .stSidebar, header, button, .stSlider { display: none !important; }
         .stTabs [data-baseweb="tab-list"] { display: none !important; }
         body { background-color: white !important; }
         .dataframe-container { overflow: visible !important; }
         table.custom-pnl th, table.custom-pnl td { color: black !important; }
         table.custom-pnl td:first-child { background-color: #f1f5f9 !important; }
+        /* Fix hiển thị Text Area khi in */
+        textarea { border: none !important; resize: none !important; outline: none !important; font-family: 'Segoe UI', sans-serif !important; font-size: 14px !important; color: black !important; background-color: white !important;}
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1025,11 +1027,11 @@ for idx, p in enumerate(current_platforms):
 
 # TAB BÁO CÁO P&L TỔNG HỢP
 with rendered_tabs[-2]:
-    col_t1, col_t2 = st.columns([8, 2])
+    col_t1, col_t2 = st.columns([7, 3])
     with col_t1:
         st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
     with col_t2:
-        if st.button("🖨️ In Báo Cáo / Lưu PDF", use_container_width=True, type="secondary"):
+        if st.button("🖨️ Xuất PDF (Mẹo: Đích đến chọn 'Lưu thành PDF')", use_container_width=True, type="secondary"):
             st.components.v1.html("<script>window.parent.print();</script>", height=0)
     
     params = st.session_state[f"params_{cur_proj}"]
@@ -1166,6 +1168,42 @@ with rendered_tabs[-2]:
             mc2.metric("⏳ Thời Gian Hòa Vốn", payback_month, help="Tháng đầu tiên Lợi nhuận lũy kế chuyển sang dương")
             mc3.metric("📈 Tổng Doanh Thu", f"{total_rev_summary:,.0f} đ", help="Doanh thu tích lũy cả vòng đời dự án")
             mc4.metric("🔥 Tỷ Suất ROI Dự Án", f"{roi_camp:,.2f}%", f"Biên LN: {profit_margin:,.2f}%", help="Lợi Nhuận Tổng / Chi Phí Tổng")
+            st.markdown("---")
+
+            # FEATURE SẾP: TỰ ĐỘNG NHẬN ĐỊNH BÁO CÁO (AUTO-INSIGHTS)
+            st.markdown("### 🤖 Hệ Thống Trợ Lý Ảo Phân Tích (Auto-Insights)")
+            insights = []
+            
+            payback_idx = res.index[res['Lợi Nhuận'] > 0].min() if not res[res['Lợi Nhuận'] > 0].empty else -1
+            if payback_idx == -1:
+                insights.append("🔴 **Rủi ro Dòng tiền (Nghiêm trọng):** Dự án KHÔNG thể hòa vốn trong chu kỳ dự phóng. Cần khẩn cấp xem lại trần giá mua User (CPN) hoặc thiết kế lại cấu trúc kiếm tiền (LTV).")
+            elif payback_idx <= 2:
+                insights.append(f"🟢 **Tốc độ Thu hồi vốn (Rất Tốt):** Dự án bắt đầu có lãi chỉ sau {payback_idx} tháng kể từ khi Launching. Dòng tiền xoay vòng nhanh, rủi ro thấp.")
+            elif payback_idx <= 5:
+                insights.append(f"🟡 **Tốc độ Thu hồi vốn (Khá/An toàn):** Mất khoảng {payback_idx} tháng để hòa vốn. Tốc độ này phù hợp với mặt bằng chung các game Mid-core/Hardcore có vòng đời sâu.")
+            else:
+                insights.append(f"🟠 **Tốc độ Thu hồi vốn (Chậm):** Cần tới {payback_idx} tháng mới thu hồi được vốn. Đội vận hành cần đặc biệt dồn lực chăm sóc tập User VIP để đảm bảo tỷ lệ Retention các tháng sau không bị gãy.")
+
+            if profit_margin > 30:
+                insights.append(f"🟢 **Biên Lợi Nhuận (Xuất sắc):** Đạt mức {profit_margin:.1f}%. Dự án có dư địa lợi nhuận rất lớn, có thể cân nhắc duyệt thêm quỹ dự phòng Marketing để 'đập bẹp' đối thủ cạnh tranh.")
+            elif profit_margin >= 15:
+                insights.append(f"🟡 **Biên Lợi Nhuận (Tiêu chuẩn):** Đạt {profit_margin:.1f}%. Mức sinh lời an toàn để công ty duy trì đội ngũ vận hành dự án lâu dài.")
+            elif profit_margin > 0:
+                insights.append(f"🟠 **Biên Lợi Nhuận (Mỏng):** Chỉ ở mức {profit_margin:.1f}%. Dự án nhạy cảm với biến động thị trường. Nếu tỷ giá USD tăng hoặc phí Server đội lên, dự án rất dễ quay đầu lỗ.")
+                
+            if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
+                idx_ob = res.index[res['Tháng'] == 'MONTH OB'][0]
+                launch_roi = res.at[idx_ob, 'Tỷ Trọng MKT/REV']
+                if launch_roi > 1.0:
+                    insights.append(f"⚠️ **Cảnh báo Giai đoạn Launching:** Tỷ trọng MKT/REV tháng đầu lên tới {launch_roi*100:.1f}%. Team đang 'đốt tiền' cực mạnh để gom User. Bắt buộc phải ép CPN xuống ở các tháng kế tiếp để bù lại.")
+                elif launch_roi > 0 and launch_roi < 0.6:
+                    insights.append(f"✨ **Hiệu suất Launching (Quá Đẹp):** Tỷ trọng MKT/REV tháng đầu chỉ ở mức {launch_roi*100:.1f}%. Chiến dịch thâu tóm User đang cực kỳ hiệu quả, tiền chi ra mang lại doanh thu tức thì rất tốt.")
+
+            for item in insights:
+                st.markdown(f"- {item}")
+                
+            st.markdown("### 📝 Ghi chú Báo Cáo (Giám đốc Dự án)")
+            st.text_area("Các nội dung gõ vào đây sẽ được hiển thị khi Xuất PDF trình sếp:", height=100, placeholder="Ví dụ: Đề xuất Board of Directors duyệt cấp ngân sách 15 tỷ cho giai đoạn Launching...")
             st.markdown("---")
 
             res_usd = res.copy()
