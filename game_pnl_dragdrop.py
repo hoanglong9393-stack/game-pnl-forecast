@@ -1001,15 +1001,26 @@ for idx, p in enumerate(current_platforms):
         # FEATURE SẾP: BIỂU ĐỒ HÒA VỐN THEO NỀN TẢNG
         st.markdown("---")
         st.markdown(f"**4. Phân Tích Điểm Hòa Vốn (Break-even Point) - {p}**")
-        ltv_vals = [float(edited_ltv.iloc[0][c]) for c in ALL_D_COLS]
-        total_nru_p = current_tr['NRU'].sum()
-        total_budget_p = (current_tr['NRU'] * current_tr['CPN (VNĐ)']).sum()
-        avg_cpn_p = total_budget_p / total_nru_p if total_nru_p > 0 else 0
+        
+        DISPLAY_LTV_COLS_BE = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
+        ltv_vals = [float(edited_ltv.iloc[0][c]) for c in DISPLAY_LTV_COLS_BE]
+        
+        tr_pre = edited_tr[edited_tr['Tháng'] == 'Pre-launch']
+        tr_ob = edited_tr[edited_tr['Tháng'] == '🔒 Month OB (Auto)']
+        
+        n_pre = float(tr_pre['NRU'].iloc[0]) if len(tr_pre) > 0 else 0
+        n_ob = float(tr_ob['NRU'].iloc[0]) if len(tr_ob) > 0 else 0
+        c_pre = float(tr_pre['CPN (VNĐ)'].iloc[0]) if len(tr_pre) > 0 else 0
+        c_ob = float(tr_ob['CPN (VNĐ)'].iloc[0]) if len(tr_ob) > 0 else 0
+        
+        launch_nru = n_pre + n_ob
+        launch_budget = (n_pre * c_pre) + (n_ob * c_ob)
+        launch_cpn = launch_budget / launch_nru if launch_nru > 0 else 0
         
         fig_be = go.Figure()
-        fig_be.add_trace(go.Scatter(x=ALL_D_COLS, y=ltv_vals, mode='lines+markers', name='LTV Tích Lũy', line=dict(width=3, color='#22C55E')))
-        fig_be.add_hline(y=avg_cpn_p, line_dash="dash", line_color="#DC2626", annotation_text=f"CPN Trung Bình ({avg_cpn_p:,.0f} đ)")
-        fig_be.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified", title=f"Giao cắt LTV và CPN - Nền tảng {p}")
+        fig_be.add_trace(go.Scatter(x=DISPLAY_LTV_COLS_BE, y=ltv_vals, mode='lines+markers', name='LTV Tích Lũy', line=dict(width=3, color='#22C55E')))
+        fig_be.add_hline(y=launch_cpn, line_dash="dash", line_color="#DC2626", annotation_text=f"CPN Launch Phase ({launch_cpn:,.0f} đ)")
+        fig_be.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified", title=f"Giao cắt LTV và CPN Launch - Nền tảng {p}")
         st.plotly_chart(fig_be, use_container_width=True)
 
 # TAB BÁO CÁO P&L TỔNG HỢP
