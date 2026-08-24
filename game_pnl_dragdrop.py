@@ -19,7 +19,7 @@ st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout=
 st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
 
 # ==========================================
-# CUSTOM CSS FOR EXCEL-LIKE TABLE
+# CUSTOM CSS FOR EXCEL-LIKE TABLE & PRINTING
 # ==========================================
 st.markdown("""
 <style>
@@ -45,73 +45,21 @@ st.markdown("""
     table.custom-pnl tr.row-profit-cum td { background-color: white; color: black; font-weight: bold; }
     table.custom-pnl tr.row-profit-cum td.positive { background-color: #22C55E; color: white; }
     table.custom-pnl tr.row-roi td { background-color: white; color: black; }
+    
+    /* STYLE DÀNH CHO KHI BẤM IN PDF (Sếp Mode) */
+    @media print {
+        .stSidebar, header, button { display: none !important; }
+        .stTabs [data-baseweb="tab-list"] { display: none !important; }
+        body { background-color: white !important; }
+        .dataframe-container { overflow: visible !important; }
+        table.custom-pnl th, table.custom-pnl td { color: black !important; }
+        table.custom-pnl td:first-child { background-color: #f1f5f9 !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# NỘI DUNG HƯỚNG DẪN & FAQ
-# ==========================================
-MANUAL_TEXT = """
-### 🛠️ PHẦN 1: HƯỚNG DẪN SỬ DỤNG (USER MANUAL)
-
-**Bước 1: Khởi tạo & Quản lý dự án**
-*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
-    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
-*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
-*   **Lưu & Khôi phục dữ liệu:** 
-    *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
-    *   *Khôi phục từ máy tính:* Kéo thả một hoặc NHIỀU file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu.
-    *   *Khôi phục từ Google Drive:* Bấm nút Đồng bộ ở thanh Menu trái để nạp kho dự án Team.
-
-**Bước 2: Cấu hình Tham số & Chi phí cố định**
-*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, LF...).
-
-**Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
-Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
-*   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
-    > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
-*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn:
-    1.  *Cách tự động:* Nhập Tổng NRU và CPN trung bình $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)**.
-    2.  *Cách thủ công:* Gõ tay (hoặc copy/paste từ Excel) trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30).
-    *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
-
-**Bước 4: Thiết lập Retention Rate (RR) & LTV**
-*   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
-*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase.
-    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước.
-
-**Bước 5: Chạy mô phỏng & Xuất báo cáo**
-Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
-1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**.
-2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo.
-
-**Bước 6: So sánh với Kho Dự án mẫu (Benchmark)**
-Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể tải Template Mẫu, nạp số thực tế và tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại.
-
----
-
-### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
-
-**Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
-👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này không làm tăng thêm chi phí Marketing của tháng OB.
-
-**Q2: Làm sao để ghi đè (Hardcode) Doanh thu thực tế của các tháng cũ cho khớp số?**
-👉 Để đảm bảo màn hình Tool gọn gàng, tính năng ghi đè doanh thu được chạy ngầm. Bạn hãy tải file **Cấu hình Input** về máy, mở sheet **"Custom Revenue"**, nhập doanh thu thực tế vào tháng bạn muốn ghi đè rồi up lại lên Tool. Tool sẽ tự ưu tiên lấy số đó để tính toán Profit, Rev Share, VAT... thay vì công thức NRU x LTV mặc định.
-
-**Q3: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
-👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu.
-
-**Q4: Peak DAU và MAU mang ý nghĩa gì?**
-*   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
-*   **MAU:** Tổng số lượng User duy nhất (Unique) vào game trong tháng.
-"""
-
-@st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
-def show_manual_dialog():
-    st.markdown(MANUAL_TEXT)
-
-# ==========================================
-# KHỞI TẠO DỮ LIỆU & MOCK DATA CHO DỰ ÁN MẪU
+# KHỞI TẠO DỮ LIỆU CHUNG
 # ==========================================
 ALL_D_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
 ALL_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"]
@@ -298,7 +246,6 @@ def load_project_from_excel(excel_data, imported_proj_name):
     if 'Params' in excel_data.sheet_names:
         st.session_state[f"params_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name='Params').to_dict('records')[0]
         
-    # NẠP CUSTOM REVENUE (TÀNG HÌNH)
     if 'Custom Revenue' in excel_data.sheet_names:
         st.session_state[f"custom_revenue_{imported_proj_name}"] = migrate_month_ob(pd.read_excel(excel_data, sheet_name='Custom Revenue').fillna(0))
     else:
@@ -369,13 +316,9 @@ def generate_cpn_compare_html(cur_cpn, s_cpn, labels, s_name, cur_name):
         if s_val > 0:
             diff = (c_val - s_val) / s_val
             diff_str = f"{diff*100:+.2f}%"
-            # Cost is lower -> good (green), Cost is higher -> bad (red)
-            if diff < 0:
-                color = "#22C55E" 
-            elif diff > 0:
-                color = "#DC2626" 
-            else:
-                color = "white"
+            if diff < 0: color = "#22C55E" 
+            elif diff > 0: color = "#DC2626" 
+            else: color = "white"
         else:
             diff_str = "-"
             color = "white"
@@ -389,301 +332,6 @@ def generate_cpn_compare_html(cur_cpn, s_cpn, labels, s_name, cur_name):
     html += '</table></div>'
     return html
 
-if "project_names" not in st.session_state:
-    st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
-    st.session_state.current_project = "T037"
-
-if "drive_synced" not in st.session_state:
-    st.session_state.drive_synced = False
-
-# ==========================================
-# KHỞI TẠO PARAMS & STATE CHO DỰ ÁN HIỆN TẠI (NẾU CHƯA CÓ)
-# ==========================================
-cur_proj = st.session_state.current_project
-if f"params_{cur_proj}" not in st.session_state:
-    st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
-
-if f"platforms_{cur_proj}" not in st.session_state:
-    st.session_state[f"platforms_{cur_proj}"] = ["Android", "iOS"]
-current_platforms = st.session_state[f"platforms_{cur_proj}"]
-
-if f"fixed_costs_{cur_proj}" not in st.session_state: st.session_state[f"fixed_costs_{cur_proj}"] = get_default_fixed_costs(25)
-for p in current_platforms:
-    if f"traffic_{p}_{cur_proj}" not in st.session_state: st.session_state[f"traffic_{p}_{cur_proj}"] = get_default_traffic(25, p=="Android")
-    if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
-    if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
-    if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
-
-if f"custom_revenue_{cur_proj}" not in st.session_state:
-    fc = st.session_state[f"fixed_costs_{cur_proj}"]
-    st.session_state[f"custom_revenue_{cur_proj}"] = pd.DataFrame({"Tháng": fc["Tháng"].tolist(), "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0]*len(fc)})
-
-# ==========================================
-# CƯỠNG CHẾ ĐỒNG BỘ DỮ LIỆU MONTH OB TỪ BẢNG DAILY
-# ==========================================
-for p in current_platforms:
-    current_tr = st.session_state[f"traffic_{p}_{cur_proj}"]
-    ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
-    
-    ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
-    ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
-
-    total_ob_nru = int(np.round(ob_daily_nru_sum))
-    calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
-
-    idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
-    if len(idx_ob) > 0:
-        current_tr.loc[idx_ob[0], "NRU"] = total_ob_nru
-        current_tr.loc[idx_ob[0], "CPN (VNĐ)"] = calc_ob_cpn
-    st.session_state[f"traffic_{p}_{cur_proj}"] = current_tr
-
-# ==========================================
-# SIDEBAR: QUẢN LÝ DỰ ÁN & DATA HUB
-# ==========================================
-with st.sidebar:
-    st.markdown("### 💁‍♂️ Trợ giúp")
-    if st.button("📖 Đọc Hướng Dẫn & FAQ", use_container_width=True, type="primary"):
-        show_manual_dialog()
-        
-    st.markdown("---")
-    
-    st.header("📁 Quản Lý Dự Án")
-    selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
-    st.session_state.current_project = selected_proj
-    cur_proj = st.session_state.current_project
-    current_platforms = st.session_state[f"platforms_{cur_proj}"]
-    
-    with st.expander("➕ Tạo Dự Án Mới"):
-        new_proj_name = st.text_input("Tên dự án mới:")
-        new_proj_months = st.number_input("Số tháng dự phóng", min_value=3, max_value=60, value=25)
-        if st.button("Tạo & Lưu"):
-            if new_proj_name and new_proj_name not in st.session_state.project_names:
-                st.session_state.project_names.append(new_proj_name)
-                st.session_state[f"platforms_{new_proj_name}"] = ["Android", "iOS"]
-                st.session_state[f"fixed_costs_{new_proj_name}"] = get_default_fixed_costs(new_proj_months)
-                st.session_state[f"traffic_Android_{new_proj_name}"] = get_default_traffic(new_proj_months, True)
-                st.session_state[f"traffic_iOS_{new_proj_name}"] = get_default_traffic(new_proj_months, False)
-                st.session_state[f"ob_daily_Android_{new_proj_name}"] = get_default_ob_daily(100000, 25000)
-                st.session_state[f"ob_daily_iOS_{new_proj_name}"] = get_default_ob_daily(50000, 32000)
-                st.session_state[f"ltv_Android_{new_proj_name}"] = get_default_ltv(True)
-                st.session_state[f"ltv_iOS_{new_proj_name}"] = get_default_ltv(False)
-                st.session_state[f"rr_Android_{new_proj_name}"] = get_default_rr(True)
-                st.session_state[f"rr_iOS_{new_proj_name}"] = get_default_rr(False)
-                st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
-                
-                months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, new_proj_months - 1)]
-                st.session_state[f"custom_revenue_{new_proj_name}"] = pd.DataFrame({"Tháng": months_label, "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0] * len(months_label)})
-                
-                st.session_state.current_project = new_proj_name
-                st.rerun()
-
-    with st.expander("🗑️ Xóa Dự Án Hiện Tại"):
-        if len(st.session_state.project_names) > 1:
-            st.warning(f"Chắc chắn xóa dự án **{cur_proj}**?")
-            if st.button("⚠️ Xác nhận Xóa", type="primary", use_container_width=True):
-                st.session_state.project_names.remove(cur_proj)
-                keys_to_delete = [k for k in st.session_state.keys() if k.endswith(f"_{cur_proj}")]
-                for k in keys_to_delete: del st.session_state[k]
-                st.session_state.current_project = st.session_state.project_names[0]
-                st.success("Đã xóa dự án thành công!")
-                st.rerun()
-        else:
-            st.info("Không thể xóa dự án duy nhất.")
-
-    st.markdown("---")
-    st.header("☁️ Đồng Bộ Kho Team (Drive)")
-    st.info("Hệ thống đã liên kết với Kho dữ liệu nội bộ. Bấm nút dưới để nạp toàn bộ dự án.")
-    
-    if not st.session_state.drive_synced:
-        if st.button("🔄 Nạp Dữ Liệu Từ Kho Team", type="primary", use_container_width=True):
-            if TEAM_DRIVE_URL and TEAM_DRIVE_URL != "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive":
-                sync_from_drive(TEAM_DRIVE_URL)
-            else:
-                st.warning("⚠️ Chưa cấu hình Link Google Drive trong mã nguồn!")
-    else:
-        st.success("✅ Đã đồng bộ Kho Team trong phiên làm việc này!")
-        st.caption("🔄 Nhấn F5 (Tải lại trang web) nếu bạn muốn nạp lại dữ liệu mới.")
-
-    st.markdown("---")
-    st.header("📱 Quản Lý Nền Tảng / Thị Trường")
-    with st.expander("➕ Thêm Nền Tảng Mới"):
-        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Global):")
-        if st.button("Thêm Nền Tảng"):
-            if new_plat and new_plat not in current_platforms:
-                st.session_state[f"platforms_{cur_proj}"].append(new_plat)
-                months_len = len(st.session_state.get(f"fixed_costs_{cur_proj}", get_default_fixed_costs(25)))
-                st.session_state[f"traffic_{new_plat}_{cur_proj}"] = get_default_traffic(months_len, False)
-                st.session_state[f"ob_daily_{new_plat}_{cur_proj}"] = get_default_ob_daily(20000, 15000)
-                st.session_state[f"ltv_{new_plat}_{cur_proj}"] = get_default_ltv(False)
-                st.session_state[f"rr_{new_plat}_{cur_proj}"] = get_default_rr(False)
-                st.success(f"Đã thêm nền tảng {new_plat}!")
-                st.rerun()
-
-    st.markdown("---")
-    st.header("📤 DATA HUB (Nạp file nội bộ)")
-    st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx) từ máy tính.")
-    
-    st.download_button(
-        label="📥 Tải Template Nhập Số Thực Tế",
-        data=get_sample_template_excel(),
-        file_name="REAL_Template_INPUT.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
-    )
-    
-    uploaded_files = st.file_uploader("Kéo thả NHIỀU file Excel:", type=["xlsx"], accept_multiple_files=True)
-    if uploaded_files:
-        current_file_names = [f.name for f in uploaded_files]
-        if st.session_state.get("last_uploaded_files") != current_file_names:
-            with st.spinner(f"Đang phân loại và nạp {len(uploaded_files)} file..."):
-                imported_last = None
-                for uploaded_file in uploaded_files:
-                    file_name = uploaded_file.name
-                    try:
-                        excel_data = pd.ExcelFile(uploaded_file)
-                        if file_name.startswith("REAL_"):
-                            sample_name = file_name.replace("REAL_", "").replace("_INPUT", "").replace(".xlsx", "")
-                            load_sample_project(excel_data, sample_name)
-                        else:
-                            imported_proj_name = file_name.replace("PNL_", "").replace("_INPUT", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
-                            if imported_proj_name not in st.session_state.project_names:
-                                st.session_state.project_names.append(imported_proj_name)
-                            load_project_from_excel(excel_data, imported_proj_name)
-                            imported_last = imported_proj_name
-                    except Exception as e:
-                        st.error(f"Lỗi đọc file {file_name}: {e}")
-                
-                st.session_state["last_uploaded_files"] = current_file_names
-                if imported_last: st.session_state.current_project = imported_last
-                st.success(f"Đã nạp xong {len(uploaded_files)} file!")
-                time.sleep(1.5)
-                st.rerun()
-
-# ==========================================
-# TABS HIỂN THỊ CHÍNH
-# ==========================================
-tabs_names = ["⚙️ Tham Số & Định Phí"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp", "📈 So Sánh & Benchmark"]
-rendered_tabs = st.tabs(tabs_names)
-
-# TAB CHI PHÍ CỐ ĐỊNH & THAM SỐ
-with rendered_tabs[0]:
-    st.markdown(f'<div class="section-title">⚙️ 1. Cấu Hình Tham Số Chung - Dự án {cur_proj}</div>', unsafe_allow_html=True)
-    
-    p_params = st.session_state[f"params_{cur_proj}"]
-    c1, c2, c3, c4, c5 = st.columns(5)
-    usd_rate = c1.number_input("Tỷ giá USD/VNĐ", value=float(p_params.get("usd_rate", 25400.0)), step=100.0, key=f"usd_{cur_proj}")
-    rev_share_pct = c2.number_input("Rev Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1, key=f"rev_{cur_proj}")
-    vat_pct = c3.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5, key=f"vat_{cur_proj}")
-    payment_fee_pct = c4.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5, key=f"pay_{cur_proj}")
-    prelaunch_comeback_pct = c5.number_input("User Comeback (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0, help="Tỷ lệ Pre-launch quay lại ngày OB", key=f"cb_{cur_proj}")
-    
-    st.session_state[f"params_{cur_proj}"] = {
-        "usd_rate": usd_rate,
-        "rev_share": rev_share_pct, "vat": vat_pct, "payment_fee": payment_fee_pct,
-        "prelaunch_comeback_pct": prelaunch_comeback_pct
-    }
-
-    st.markdown("---")
-    st.markdown(f'<div class="section-title">💸 2. Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs)</div>', unsafe_allow_html=True)
-    st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
-    
-    fc_df = st.session_state[f"fixed_costs_{cur_proj}"]
-    styled_fc = fc_df.style.apply(highlight_ob_row, axis=1)
-    
-    edited_fc = st.data_editor(
-        styled_fc, num_rows="dynamic", use_container_width=True, hide_index=True, key=f"ed_fc_{cur_proj}",
-        column_config={
-            "Nhân sự (VNĐ)": st.column_config.NumberColumn("Nhân sự (VNĐ)", format="%d", min_value=0),
-            "Server (VNĐ)": st.column_config.NumberColumn("Server (VNĐ)", format="%d", min_value=0),
-            "LF + Branding (VNĐ)": st.column_config.NumberColumn("LF + Branding (VNĐ)", format="%d", min_value=0)
-        }
-    )
-    if not edited_fc.astype(str).equals(fc_df.astype(str)):
-        st.session_state[f"fixed_costs_{cur_proj}"] = edited_fc
-        st.rerun()
-
-# CÁC TAB NỀN TẢNG (TRAFFIC, RR & LTV)
-for idx, p in enumerate(current_platforms):
-    with rendered_tabs[idx + 1]:
-        col_title, col_btn = st.columns([4, 1])
-        col_title.markdown(f'<div class="section-title">Nền Tảng / Thị Trường: {p} ({cur_proj})</div>', unsafe_allow_html=True)
-        if len(current_platforms) > 1:
-            if col_btn.button(f"🗑️ Xóa {p}", key=f"del_{p}_{cur_proj}"):
-                st.session_state[f"platforms_{cur_proj}"].remove(p)
-                st.rerun()
-
-        st.markdown(f"**1. Kế Hoạch Traffic Tháng - {p}**")
-        st.info("🔒 Dòng bôi đỏ `Month OB` được tự động tính toán từ bảng phân bổ 30 ngày. Vui lòng không ghi đè.")
-        
-        df_p = st.session_state[f"traffic_{p}_{cur_proj}"]
-        styled_p = df_p.style.apply(highlight_ob_row, axis=1)
-        
-        edited_tr = st.data_editor(
-            styled_p, num_rows="dynamic", use_container_width=True, hide_index=True, key=f"ed_tr_{p}_{cur_proj}",
-            column_config={
-                "NRU": st.column_config.NumberColumn(f"NRU {p}", format="%d", min_value=0),
-                "CPN (VNĐ)": st.column_config.NumberColumn(f"CPN {p} (VNĐ)", format="%d", min_value=0)
-            }
-        )
-        if not edited_tr.astype(str).equals(df_p.astype(str)):
-            st.session_state[f"traffic_{p}_{cur_proj}"] = edited_tr
-            st.rerun()
-            
-        with st.expander(f"📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA ({p}) - [Sửa số tại đây]", expanded=False):
-            ob_df = st.session_state[f"ob_daily_{p}_{cur_proj}"]
-            cur_sum_nru = float(ob_df["NRU (Users)"].sum())
-            cur_sum_budget = float((ob_df["NRU (Users)"] * ob_df["CPN (VNĐ)"]).sum())
-            
-            c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 2])
-            target_nru = c1.number_input(f"Mục tiêu NRU mua ({p}):", value=int(cur_sum_nru) if cur_sum_nru > 0 else 50000, step=1000, key=f"tgt_nru_{p}_{cur_proj}")
-            target_cpn = c2.number_input(f"Mục tiêu CPN mua TB ({p}):", value=int(cur_sum_budget/cur_sum_nru) if cur_sum_nru > 0 else 25000, step=1000, key=f"tgt_cpn_{p}_{cur_proj}")
-            with c3:
-                st.write(""); st.write("")
-                if st.button("⚡ Chia mốc dồn đầu (50-20-30)", key=f"btn_dist_{p}_{cur_proj}"):
-                    st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(target_nru, target_cpn)
-                    st.rerun()
-                    
-            edited_ob = st.data_editor(
-                st.session_state[f"ob_daily_{p}_{cur_proj}"], num_rows="fixed", use_container_width=True, hide_index=True, key=f"ed_ob_{p}_{cur_proj}",
-                column_config={"NRU (Users)": st.column_config.NumberColumn("NRU", format="%d", min_value=0), "CPN (VNĐ)": st.column_config.NumberColumn("CPN", format="%d", min_value=0)}
-            )
-            if not edited_ob.astype(str).equals(st.session_state[f"ob_daily_{p}_{cur_proj}"].astype(str)):
-                st.session_state[f"ob_daily_{p}_{cur_proj}"] = edited_ob
-                st.rerun()
-
-        st.markdown("---")
-        st.markdown(f"**2. Cấu Hình Retention Rate (RR %) - {p}**")
-        month_options = df_p["Tháng"].tolist()
-        
-        col_cfg_rr = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
-        for c in ALL_RR_COLS: col_cfg_rr[c] = st.column_config.NumberColumn(f"{c} (%)", format="%.2f", min_value=0.0, max_value=100.0)
-        
-        edited_rr = st.data_editor(
-            st.session_state[f"rr_{p}_{cur_proj}"], num_rows="dynamic", use_container_width=True, hide_index=True, column_config=col_cfg_rr, key=f"ed_rr_{p}_{cur_proj}"
-        )
-        if not edited_rr.astype(str).equals(st.session_state[f"rr_{p}_{cur_proj}"].astype(str)):
-            st.session_state[f"rr_{p}_{cur_proj}"] = edited_rr
-
-        st.markdown("---")
-        st.markdown(f"**3. Cấu Hình LTV Curve & Hệ Số K - {p}**")
-        col_cfg = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
-        for c in ALL_D_COLS: col_cfg[c] = st.column_config.NumberColumn(f"{c} (VNĐ)", format="%d", min_value=0)
-        
-        edited_ltv = st.data_editor(
-            st.session_state[f"ltv_{p}_{cur_proj}"], num_rows="dynamic", use_container_width=True, hide_index=True, column_config=col_cfg, key=f"ed_ltv_{p}_{cur_proj}"
-        )
-        if not edited_ltv.astype(str).equals(st.session_state[f"ltv_{p}_{cur_proj}"].astype(str)):
-            st.session_state[f"ltv_{p}_{cur_proj}"] = edited_ltv
-            
-        k_df = edited_ltv.copy()
-        for c in ALL_D_COLS: k_df[c] = pd.to_numeric(k_df[c], errors="coerce").fillna(0.0)
-        k_df['K1'] = np.where(k_df['D1'] > 0, 1.0, 0.0)
-        for d in ALL_D_TARGETS: k_df[f'K{d}'] = np.where(k_df['D1'] > 0, k_df[f'D{d}'] / k_df['D1'], 0.0)
-        st.dataframe(k_df[["Phase Name", "Áp dụng từ Tháng", "K1"] + [f'K{d}' for d in ALL_D_TARGETS]].style.format({f'K{d}': "{:.2f}x" for d in [1] + ALL_D_TARGETS}), use_container_width=True, hide_index=True)
-
-# ==========================================
-# ENGINE CALCULATION & EXPORT HELPERS
-# ==========================================
 def create_daily_ltv_curve(anchor_points):
     days = sorted(anchor_points.keys())
     max_day = 720
@@ -1061,14 +709,331 @@ def generate_pnl_html(res, is_usd=False):
     html += '</table></div>'
     return html
 
+# ==========================================
+# KHỞI TẠO STATE BAN ĐẦU
+# ==========================================
+if "project_names" not in st.session_state:
+    st.session_state.project_names = ["Dự án 1 (T029)", "T037"]
+    st.session_state.current_project = "T037"
+
+if "drive_synced" not in st.session_state:
+    st.session_state.drive_synced = False
+
+cur_proj = st.session_state.current_project
+if f"params_{cur_proj}" not in st.session_state:
+    st.session_state[f"params_{cur_proj}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
+
+if f"platforms_{cur_proj}" not in st.session_state:
+    st.session_state[f"platforms_{cur_proj}"] = ["Android", "iOS"]
+current_platforms = st.session_state[f"platforms_{cur_proj}"]
+
+if f"fixed_costs_{cur_proj}" not in st.session_state: st.session_state[f"fixed_costs_{cur_proj}"] = get_default_fixed_costs(25)
+for p in current_platforms:
+    if f"traffic_{p}_{cur_proj}" not in st.session_state: st.session_state[f"traffic_{p}_{cur_proj}"] = get_default_traffic(25, p=="Android")
+    if f"ob_daily_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(100000 if p=="Android" else 50000, 25000 if p=="Android" else 32000)
+    if f"ltv_{p}_{cur_proj}" not in st.session_state: st.session_state[f"ltv_{p}_{cur_proj}"] = get_default_ltv(p=="Android")
+    if f"rr_{p}_{cur_proj}" not in st.session_state: st.session_state[f"rr_{p}_{cur_proj}"] = get_default_rr(p=="Android")
+
+if f"custom_revenue_{cur_proj}" not in st.session_state:
+    fc = st.session_state[f"fixed_costs_{cur_proj}"]
+    st.session_state[f"custom_revenue_{cur_proj}"] = pd.DataFrame({"Tháng": fc["Tháng"].tolist(), "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0]*len(fc)})
+
+for p in current_platforms:
+    current_tr = st.session_state[f"traffic_{p}_{cur_proj}"]
+    ob_daily = st.session_state[f"ob_daily_{p}_{cur_proj}"]
+    
+    ob_daily_nru_sum = float(ob_daily["NRU (Users)"].sum())
+    ob_daily_budget = float((ob_daily["NRU (Users)"] * ob_daily["CPN (VNĐ)"]).sum())
+
+    total_ob_nru = int(np.round(ob_daily_nru_sum))
+    calc_ob_cpn = int(np.round(ob_daily_budget / total_ob_nru)) if total_ob_nru > 0 else 0
+
+    idx_ob = current_tr[current_tr["Tháng"] == "🔒 Month OB (Auto)"].index
+    if len(idx_ob) > 0:
+        current_tr.loc[idx_ob[0], "NRU"] = total_ob_nru
+        current_tr.loc[idx_ob[0], "CPN (VNĐ)"] = calc_ob_cpn
+    st.session_state[f"traffic_{p}_{cur_proj}"] = current_tr
+
+# ==========================================
+# SIDEBAR: QUẢN LÝ DỰ ÁN & DATA HUB
+# ==========================================
+with st.sidebar:
+    st.markdown("### 💁‍♂️ Trợ giúp")
+    if st.button("📖 Đọc Hướng Dẫn & FAQ", use_container_width=True, type="primary"):
+        show_manual_dialog()
+        
+    st.markdown("---")
+    
+    st.header("📁 Quản Lý Dự Án")
+    selected_proj = st.selectbox("Chọn dự án:", st.session_state.project_names, index=st.session_state.project_names.index(st.session_state.current_project))
+    st.session_state.current_project = selected_proj
+    cur_proj = st.session_state.current_project
+    current_platforms = st.session_state[f"platforms_{cur_proj}"]
+    
+    with st.expander("➕ Tạo Dự Án Mới"):
+        new_proj_name = st.text_input("Tên dự án mới:")
+        new_proj_months = st.number_input("Số tháng dự phóng", min_value=3, max_value=60, value=25)
+        if st.button("Tạo & Lưu"):
+            if new_proj_name and new_proj_name not in st.session_state.project_names:
+                st.session_state.project_names.append(new_proj_name)
+                st.session_state[f"platforms_{new_proj_name}"] = ["Android", "iOS"]
+                st.session_state[f"fixed_costs_{new_proj_name}"] = get_default_fixed_costs(new_proj_months)
+                st.session_state[f"traffic_Android_{new_proj_name}"] = get_default_traffic(new_proj_months, True)
+                st.session_state[f"traffic_iOS_{new_proj_name}"] = get_default_traffic(new_proj_months, False)
+                st.session_state[f"ob_daily_Android_{new_proj_name}"] = get_default_ob_daily(100000, 25000)
+                st.session_state[f"ob_daily_iOS_{new_proj_name}"] = get_default_ob_daily(50000, 32000)
+                st.session_state[f"ltv_Android_{new_proj_name}"] = get_default_ltv(True)
+                st.session_state[f"ltv_iOS_{new_proj_name}"] = get_default_ltv(False)
+                st.session_state[f"rr_Android_{new_proj_name}"] = get_default_rr(True)
+                st.session_state[f"rr_iOS_{new_proj_name}"] = get_default_rr(False)
+                st.session_state[f"params_{new_proj_name}"] = {"rev_share": 20.2, "vat": 10.0, "payment_fee": 5.0, "prelaunch_comeback_pct": 60.0, "usd_rate": 25400.0}
+                
+                months_label = ["Pre-launch", "🔒 Month OB (Auto)"] + [f"Month OB+{i}" for i in range(1, new_proj_months - 1)]
+                st.session_state[f"custom_revenue_{new_proj_name}"] = pd.DataFrame({"Tháng": months_label, "Doanh Thu Tùy Chỉnh (VNĐ)": [0.0] * len(months_label)})
+                
+                st.session_state.current_project = new_proj_name
+                st.rerun()
+
+    with st.expander("🗑️ Xóa Dự Án Hiện Tại"):
+        if len(st.session_state.project_names) > 1:
+            st.warning(f"Chắc chắn xóa dự án **{cur_proj}**?")
+            if st.button("⚠️ Xác nhận Xóa", type="primary", use_container_width=True):
+                st.session_state.project_names.remove(cur_proj)
+                keys_to_delete = [k for k in st.session_state.keys() if k.endswith(f"_{cur_proj}")]
+                for k in keys_to_delete: del st.session_state[k]
+                st.session_state.current_project = st.session_state.project_names[0]
+                st.success("Đã xóa dự án thành công!")
+                st.rerun()
+        else:
+            st.info("Không thể xóa dự án duy nhất.")
+
+    st.markdown("---")
+    st.header("☁️ Đồng Bộ Kho Team (Drive)")
+    st.info("Hệ thống đã liên kết với Kho dữ liệu nội bộ. Bấm nút dưới để nạp toàn bộ dự án.")
+    
+    if not st.session_state.drive_synced:
+        if st.button("🔄 Nạp Dữ Liệu Từ Kho Team", type="primary", use_container_width=True):
+            if TEAM_DRIVE_URL and TEAM_DRIVE_URL != "https://drive.google.com/drive/folders/1234567890abcdef_ViDu_Link_Drive":
+                sync_from_drive(TEAM_DRIVE_URL)
+            else:
+                st.warning("⚠️ Chưa cấu hình Link Google Drive trong mã nguồn!")
+    else:
+        st.success("✅ Đã đồng bộ Kho Team trong phiên làm việc này!")
+        st.caption("🔄 Nhấn F5 (Tải lại trang web) nếu bạn muốn nạp lại dữ liệu mới.")
+
+    st.markdown("---")
+    st.header("📱 Quản Lý Nền Tảng / Thị Trường")
+    with st.expander("➕ Thêm Nền Tảng Mới"):
+        new_plat = st.text_input("Tên nền tảng (VD: Web, PC, Global):")
+        if st.button("Thêm Nền Tảng"):
+            if new_plat and new_plat not in current_platforms:
+                st.session_state[f"platforms_{cur_proj}"].append(new_plat)
+                months_len = len(st.session_state.get(f"fixed_costs_{cur_proj}", get_default_fixed_costs(25)))
+                st.session_state[f"traffic_{new_plat}_{cur_proj}"] = get_default_traffic(months_len, False)
+                st.session_state[f"ob_daily_{new_plat}_{cur_proj}"] = get_default_ob_daily(20000, 15000)
+                st.session_state[f"ltv_{new_plat}_{cur_proj}"] = get_default_ltv(False)
+                st.session_state[f"rr_{new_plat}_{cur_proj}"] = get_default_rr(False)
+                st.success(f"Đã thêm nền tảng {new_plat}!")
+                st.rerun()
+
+    st.markdown("---")
+    st.header("📤 DATA HUB (Nạp file nội bộ)")
+    st.info("Hỗ trợ nạp song song file Dự phóng (PNL_*.xlsx) và file Benchmark thực tế (REAL_*.xlsx) từ máy tính.")
+    
+    st.download_button(
+        label="📥 Tải Template Nhập Số Thực Tế",
+        data=get_sample_template_excel(),
+        file_name="REAL_Template_INPUT.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True
+    )
+    
+    uploaded_files = st.file_uploader("Kéo thả NHIỀU file Excel:", type=["xlsx"], accept_multiple_files=True)
+    if uploaded_files:
+        current_file_names = [f.name for f in uploaded_files]
+        if st.session_state.get("last_uploaded_files") != current_file_names:
+            with st.spinner(f"Đang phân loại và nạp {len(uploaded_files)} file..."):
+                imported_last = None
+                for uploaded_file in uploaded_files:
+                    file_name = uploaded_file.name
+                    try:
+                        excel_data = pd.ExcelFile(uploaded_file)
+                        if file_name.startswith("REAL_"):
+                            sample_name = file_name.replace("REAL_", "").replace("_INPUT", "").replace(".xlsx", "")
+                            load_sample_project(excel_data, sample_name)
+                        else:
+                            imported_proj_name = file_name.replace("PNL_", "").replace("_INPUT", "").replace("_Input", "").replace("_Report", "").replace(".xlsx", "")
+                            if imported_proj_name not in st.session_state.project_names:
+                                st.session_state.project_names.append(imported_proj_name)
+                            load_project_from_excel(excel_data, imported_proj_name)
+                            imported_last = imported_proj_name
+                    except Exception as e:
+                        st.error(f"Lỗi đọc file {file_name}: {e}")
+                
+                st.session_state["last_uploaded_files"] = current_file_names
+                if imported_last: st.session_state.current_project = imported_last
+                st.success(f"Đã nạp xong {len(uploaded_files)} file!")
+                time.sleep(1.5)
+                st.rerun()
+
+# ==========================================
+# TABS HIỂN THỊ CHÍNH
+# ==========================================
+tabs_names = ["⚙️ Tham Số & Định Phí"] + [f"📱 {p}" for p in current_platforms] + ["📊 Báo Cáo P&L Tổng Hợp", "📈 So Sánh & Benchmark"]
+rendered_tabs = st.tabs(tabs_names)
+
+# TAB CHI PHÍ CỐ ĐỊNH & THAM SỐ
+with rendered_tabs[0]:
+    st.markdown(f'<div class="section-title">⚙️ 1. Cấu Hình Tham Số Chung - Dự án {cur_proj}</div>', unsafe_allow_html=True)
+    
+    p_params = st.session_state[f"params_{cur_proj}"]
+    c1, c2, c3, c4, c5 = st.columns(5)
+    usd_rate = c1.number_input("Tỷ giá USD/VNĐ", value=float(p_params.get("usd_rate", 25400.0)), step=100.0, key=f"usd_{cur_proj}")
+    rev_share_pct = c2.number_input("Rev Share Dev (%)", value=float(p_params.get("rev_share", 20.2)), step=0.1, key=f"rev_{cur_proj}")
+    vat_pct = c3.number_input("VAT (%)", value=float(p_params.get("vat", 10.0)), step=0.5, key=f"vat_{cur_proj}")
+    payment_fee_pct = c4.number_input("Payment Fee (%)", value=float(p_params.get("payment_fee", 5.0)), step=0.5, key=f"pay_{cur_proj}")
+    prelaunch_comeback_pct = c5.number_input("User Comeback (%)", value=float(p_params.get("prelaunch_comeback_pct", 60.0)), step=1.0, help="Tỷ lệ Pre-launch quay lại ngày OB", key=f"cb_{cur_proj}")
+    
+    st.session_state[f"params_{cur_proj}"] = {
+        "usd_rate": usd_rate,
+        "rev_share": rev_share_pct, "vat": vat_pct, "payment_fee": payment_fee_pct,
+        "prelaunch_comeback_pct": prelaunch_comeback_pct
+    }
+
+    st.markdown("---")
+    st.markdown(f'<div class="section-title">💸 2. Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs)</div>', unsafe_allow_html=True)
+    st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
+    
+    fc_df = st.session_state[f"fixed_costs_{cur_proj}"]
+    styled_fc = fc_df.style.apply(highlight_ob_row, axis=1)
+    
+    edited_fc = st.data_editor(
+        styled_fc, num_rows="dynamic", use_container_width=True, hide_index=True, key=f"ed_fc_{cur_proj}",
+        column_config={
+            "Nhân sự (VNĐ)": st.column_config.NumberColumn("Nhân sự (VNĐ)", format="%d", min_value=0),
+            "Server (VNĐ)": st.column_config.NumberColumn("Server (VNĐ)", format="%d", min_value=0),
+            "LF + Branding (VNĐ)": st.column_config.NumberColumn("LF + Branding (VNĐ)", format="%d", min_value=0)
+        }
+    )
+    if not edited_fc.astype(str).equals(fc_df.astype(str)):
+        st.session_state[f"fixed_costs_{cur_proj}"] = edited_fc
+        st.rerun()
+
+# CÁC TAB NỀN TẢNG (TRAFFIC, RR & LTV)
+for idx, p in enumerate(current_platforms):
+    with rendered_tabs[idx + 1]:
+        col_title, col_btn = st.columns([4, 1])
+        col_title.markdown(f'<div class="section-title">Nền Tảng / Thị Trường: {p} ({cur_proj})</div>', unsafe_allow_html=True)
+        if len(current_platforms) > 1:
+            if col_btn.button(f"🗑️ Xóa {p}", key=f"del_{p}_{cur_proj}"):
+                st.session_state[f"platforms_{cur_proj}"].remove(p)
+                st.rerun()
+
+        st.markdown(f"**1. Kế Hoạch Traffic Tháng - {p}**")
+        st.info("🔒 Dòng bôi đỏ `Month OB` được tự động tính toán từ bảng phân bổ 30 ngày. Vui lòng không ghi đè.")
+        
+        df_p = st.session_state[f"traffic_{p}_{cur_proj}"]
+        styled_p = df_p.style.apply(highlight_ob_row, axis=1)
+        
+        edited_tr = st.data_editor(
+            styled_p, num_rows="dynamic", use_container_width=True, hide_index=True, key=f"ed_tr_{p}_{cur_proj}",
+            column_config={
+                "NRU": st.column_config.NumberColumn(f"NRU {p}", format="%d", min_value=0),
+                "CPN (VNĐ)": st.column_config.NumberColumn(f"CPN {p} (VNĐ)", format="%d", min_value=0)
+            }
+        )
+        if not edited_tr.astype(str).equals(df_p.astype(str)):
+            st.session_state[f"traffic_{p}_{cur_proj}"] = edited_tr
+            st.rerun()
+            
+        with st.expander(f"📅 Chi Tiết Phân Bổ 30 Ngày Tháng OPEN BETA ({p}) - [Sửa số tại đây]", expanded=False):
+            ob_df = st.session_state[f"ob_daily_{p}_{cur_proj}"]
+            cur_sum_nru = float(ob_df["NRU (Users)"].sum())
+            cur_sum_budget = float((ob_df["NRU (Users)"] * ob_df["CPN (VNĐ)"]).sum())
+            
+            c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 2])
+            target_nru = c1.number_input(f"Mục tiêu NRU mua ({p}):", value=int(cur_sum_nru) if cur_sum_nru > 0 else 50000, step=1000, key=f"tgt_nru_{p}_{cur_proj}")
+            target_cpn = c2.number_input(f"Mục tiêu CPN mua TB ({p}):", value=int(cur_sum_budget/cur_sum_nru) if cur_sum_nru > 0 else 25000, step=1000, key=f"tgt_cpn_{p}_{cur_proj}")
+            with c3:
+                st.write(""); st.write("")
+                if st.button("⚡ Chia mốc dồn đầu (50-20-30)", key=f"btn_dist_{p}_{cur_proj}"):
+                    st.session_state[f"ob_daily_{p}_{cur_proj}"] = get_default_ob_daily(target_nru, target_cpn)
+                    st.rerun()
+                    
+            edited_ob = st.data_editor(
+                st.session_state[f"ob_daily_{p}_{cur_proj}"], num_rows="fixed", use_container_width=True, hide_index=True, key=f"ed_ob_{p}_{cur_proj}",
+                column_config={"NRU (Users)": st.column_config.NumberColumn("NRU", format="%d", min_value=0), "CPN (VNĐ)": st.column_config.NumberColumn("CPN", format="%d", min_value=0)}
+            )
+            if not edited_ob.astype(str).equals(st.session_state[f"ob_daily_{p}_{cur_proj}"].astype(str)):
+                st.session_state[f"ob_daily_{p}_{cur_proj}"] = edited_ob
+                st.rerun()
+
+        st.markdown("---")
+        st.markdown(f"**2. Cấu Hình Retention Rate (RR %) - {p}**")
+        month_options = df_p["Tháng"].tolist()
+        
+        col_cfg_rr = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
+        for c in ALL_RR_COLS: col_cfg_rr[c] = st.column_config.NumberColumn(f"{c} (%)", format="%.2f", min_value=0.0, max_value=100.0)
+        
+        edited_rr = st.data_editor(
+            st.session_state[f"rr_{p}_{cur_proj}"], num_rows="dynamic", use_container_width=True, hide_index=True, column_config=col_cfg_rr, key=f"ed_rr_{p}_{cur_proj}"
+        )
+        if not edited_rr.astype(str).equals(st.session_state[f"rr_{p}_{cur_proj}"].astype(str)):
+            st.session_state[f"rr_{p}_{cur_proj}"] = edited_rr
+
+        st.markdown("---")
+        st.markdown(f"**3. Cấu Hình LTV Curve & Hệ Số K - {p}**")
+        col_cfg = {"Áp dụng từ Tháng": st.column_config.SelectboxColumn("Áp dụng từ Tháng", options=month_options)}
+        for c in ALL_D_COLS: col_cfg[c] = st.column_config.NumberColumn(f"{c} (VNĐ)", format="%d", min_value=0)
+        
+        edited_ltv = st.data_editor(
+            st.session_state[f"ltv_{p}_{cur_proj}"], num_rows="dynamic", use_container_width=True, hide_index=True, column_config=col_cfg, key=f"ed_ltv_{p}_{cur_proj}"
+        )
+        if not edited_ltv.astype(str).equals(st.session_state[f"ltv_{p}_{cur_proj}"].astype(str)):
+            st.session_state[f"ltv_{p}_{cur_proj}"] = edited_ltv
+            
+        k_df = edited_ltv.copy()
+        for c in ALL_D_COLS: k_df[c] = pd.to_numeric(k_df[c], errors="coerce").fillna(0.0)
+        k_df['K1'] = np.where(k_df['D1'] > 0, 1.0, 0.0)
+        for d in ALL_D_TARGETS: k_df[f'K{d}'] = np.where(k_df['D1'] > 0, k_df[f'D{d}'] / k_df['D1'], 0.0)
+        st.dataframe(k_df[["Phase Name", "Áp dụng từ Tháng", "K1"] + [f'K{d}' for d in ALL_D_TARGETS]].style.format({f'K{d}': "{:.2f}x" for d in [1] + ALL_D_TARGETS}), use_container_width=True, hide_index=True)
+        
+        # FEATURE SẾP: BIỂU ĐỒ HÒA VỐN THEO NỀN TẢNG
+        st.markdown("---")
+        st.markdown(f"**4. Phân Tích Điểm Hòa Vốn (Break-even Point) - {p}**")
+        ltv_vals = [float(edited_ltv.iloc[0][c]) for c in ALL_D_COLS]
+        total_nru_p = current_tr['NRU'].sum()
+        total_budget_p = (current_tr['NRU'] * current_tr['CPN (VNĐ)']).sum()
+        avg_cpn_p = total_budget_p / total_nru_p if total_nru_p > 0 else 0
+        
+        fig_be = go.Figure()
+        fig_be.add_trace(go.Scatter(x=ALL_D_COLS, y=ltv_vals, mode='lines+markers', name='LTV Tích Lũy', line=dict(width=3, color='#22C55E')))
+        fig_be.add_hline(y=avg_cpn_p, line_dash="dash", line_color="#DC2626", annotation_text=f"CPN Trung Bình ({avg_cpn_p:,.0f} đ)")
+        fig_be.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20), hovermode="x unified", title=f"Giao cắt LTV và CPN - Nền tảng {p}")
+        st.plotly_chart(fig_be, use_container_width=True)
+
 # TAB BÁO CÁO P&L TỔNG HỢP
 with rendered_tabs[-2]:
-    st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
+    col_t1, col_t2 = st.columns([8, 2])
+    with col_t1:
+        st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
+    with col_t2:
+        st.markdown('<button onclick="window.print()" style="width:100%; padding: 8px; background-color: #3B82F6; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">🖨️ In Báo Cáo / Lưu PDF</button>', unsafe_allow_html=True)
     
     params = st.session_state[f"params_{cur_proj}"]
     fixed_costs = st.session_state[f"fixed_costs_{cur_proj}"]
     
-    run_sim = st.button(f"🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng ({cur_proj})", type="primary")
+    # FEATURE SẾP: SCENARIO PLANNING
+    with st.expander("🕹️ Chế độ kịch bản (Scenario Planning - What IF)", expanded=False):
+        st.info("Kéo thanh trượt để giả lập các kịch bản thực tế (Tăng/giảm chi phí và doanh thu) mà không làm ảnh hưởng đến cấu hình gốc.")
+        sc_col1, sc_col2 = st.columns(2)
+        cpn_adj = sc_col1.slider("Điều chỉnh Chi Phí MKT (CPN) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là mua User đắt lên, Âm là rẻ đi")
+        ltv_adj = sc_col2.slider("Điều chỉnh Doanh Thu (LTV) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là game cực hot hút máu tốt, Âm là sập hầm")
+        
+        cpn_multiplier = 1.0 + (cpn_adj / 100.0)
+        ltv_multiplier = 1.0 + (ltv_adj / 100.0)
+    
+    run_sim = st.button(f"🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng ({cur_proj})", type="primary", use_container_width=True)
     
     if run_sim or f"pnl_res_{cur_proj}" in st.session_state:
         with st.spinner("Đang tính ma trận Cohort hợp nhất đa nền tảng..."):
@@ -1123,6 +1088,10 @@ with rendered_tabs[-2]:
                             total_rev_arr[i] = val
                     except:
                         pass
+            
+            # ÁP DỤNG SCENARIO MULTIPLIER
+            total_mkt_arr = total_mkt_arr * cpn_multiplier
+            total_rev_arr = total_rev_arr * ltv_multiplier
                         
             res['NRU'] = total_nru_arr
             
@@ -1153,7 +1122,6 @@ with rendered_tabs[-2]:
             res['Lợi Nhuận'] = res['Lợi nhuận tháng'].cumsum()
             res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, res['Marketing (UA+Tax)'] / res['Revenue'], 0.0)
             
-            # --- CUSTOM MKT/REV FOR MONTH OB ---
             if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
                 idx_pre = res.index[res['Tháng'] == 'PRE-LAUNCH'][0]
                 idx_ob = res.index[res['Tháng'] == 'MONTH OB'][0]
@@ -1165,10 +1133,29 @@ with rendered_tabs[-2]:
                 
                 if rev_ob > 0:
                     res.at[idx_ob, 'Tỷ Trọng MKT/REV'] = (mkt_pre + mkt_ob + brand_ob) / rev_ob
-            # -----------------------------------
             
             st.session_state[f"pnl_res_{cur_proj}"] = res
             
+            # FEATURE SẾP: EXECUTIVE SUMMARY DASHBOARD
+            st.markdown("### 🏆 Bảng Chỉ Số Chốt (Executive Summary)")
+            total_rev_summary = res['Revenue'].sum()
+            total_cost_summary = res['Tổng Chi Phí'].sum()
+            total_profit_summary = res['Lợi Nhuận'].iloc[-1]
+            max_drawdown = res['Lợi Nhuận'].min()
+            
+            positive_months = res[res['Lợi Nhuận'] > 0]['Tháng'].tolist()
+            payback_month = positive_months[0] if positive_months else "Chưa hòa vốn"
+            
+            roi_camp = (total_profit_summary / total_cost_summary * 100) if total_cost_summary > 0 else 0
+            profit_margin = (total_profit_summary / total_rev_summary * 100) if total_rev_summary > 0 else 0
+            
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            mc1.metric("💰 Vốn Chuẩn Bị (Max Drawdown)", f"{max_drawdown:,.0f} đ", help="Số vốn công ty thực tế phải bỏ ra tối đa trước khi game tự nuôi được nó")
+            mc2.metric("⏳ Thời Gian Hòa Vốn", payback_month, help="Tháng đầu tiên Lợi nhuận lũy kế chuyển sang dương")
+            mc3.metric("📈 Tổng Doanh Thu", f"{total_rev_summary:,.0f} đ", help="Doanh thu tích lũy cả vòng đời dự án")
+            mc4.metric("🔥 Tỷ Suất ROI Dự Án", f"{roi_camp:,.2f}%", f"Biên LN: {profit_margin:,.2f}%", help="Lợi Nhuận Tổng / Chi Phí Tổng")
+            st.markdown("---")
+
             res_usd = res.copy()
             usd_rate = float(params.get('usd_rate', 25400.0))
             monetary_cols = ['Marketing (UA+Tax)', 'Revenue', 'Nhân sự', 'Server', 'LF + Branding', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
