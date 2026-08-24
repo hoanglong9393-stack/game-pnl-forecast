@@ -19,7 +19,7 @@ st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout=
 st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
 
 # ==========================================
-# CUSTOM CSS FOR EXCEL-LIKE TABLE & PRINTING
+# CUSTOM CSS FOR EXCEL-LIKE TABLE
 # ==========================================
 st.markdown("""
 <style>
@@ -45,23 +45,73 @@ st.markdown("""
     table.custom-pnl tr.row-profit-cum td { background-color: white; color: black; font-weight: bold; }
     table.custom-pnl tr.row-profit-cum td.positive { background-color: #22C55E; color: white; }
     table.custom-pnl tr.row-roi td { background-color: white; color: black; }
-    
-    /* STYLE DÀNH CHO KHI BẤM IN PDF (Sếp Mode) */
-    @media print {
-        .stSidebar, header, button, .stSlider { display: none !important; }
-        .stTabs [data-baseweb="tab-list"] { display: none !important; }
-        body { background-color: white !important; }
-        .dataframe-container { overflow: visible !important; }
-        table.custom-pnl th, table.custom-pnl td { color: black !important; }
-        table.custom-pnl td:first-child { background-color: #f1f5f9 !important; }
-        /* Fix hiển thị Text Area khi in */
-        textarea { border: none !important; resize: none !important; outline: none !important; font-family: 'Segoe UI', sans-serif !important; font-size: 14px !important; color: black !important; background-color: white !important;}
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# KHỞI TẠO DỮ LIỆU CHUNG
+# NỘI DUNG HƯỚNG DẪN & FAQ
+# ==========================================
+MANUAL_TEXT = """
+### 🛠️ PHẦN 1: HƯỚNG DẪN SỬ DỤNG (USER MANUAL)
+
+**Bước 1: Khởi tạo & Quản lý dự án**
+*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
+    > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
+*   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
+*   **Lưu & Khôi phục dữ liệu:** 
+    *   *Lưu trữ (Save):* Bấm nút **📥 Tải File Cấu Hình Input** ở Tab cuối cùng để lưu số liệu xuống máy.
+    *   *Khôi phục từ máy tính:* Kéo thả một hoặc NHIỀU file Excel Input vào ô **📤 Tải Lên Dữ Liệu (Excel)** ở thanh menu.
+    *   *Khôi phục từ Google Drive:* Bấm nút Đồng bộ ở thanh Menu trái để nạp kho dự án Team.
+
+**Bước 2: Cấu hình Tham số & Chi phí cố định**
+*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, LF...).
+
+**Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
+Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
+*   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
+    > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
+*   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn:
+    1.  *Cách tự động:* Nhập Tổng NRU và CPN trung bình $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)**.
+    2.  *Cách thủ công:* Gõ tay (hoặc copy/paste từ Excel) trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30).
+    *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
+
+**Bước 4: Thiết lập Retention Rate (RR) & LTV**
+*   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
+*   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase.
+    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước.
+
+**Bước 5: Chạy mô phỏng & Xuất báo cáo**
+Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
+1.  Bấm nút đỏ **🚀 Chạy Mô Phỏng Tổng Đa Nền Tảng**.
+2.  Bấm nút **📊 Tải Báo Cáo P&L & Cấu Hình (Excel)** để xuất file báo cáo.
+
+**Bước 6: So sánh với Kho Dự án mẫu (Benchmark)**
+Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể tải Template Mẫu, nạp số thực tế và tích chọn các dự án thực tế để hệ thống tự vẽ biểu đồ đè lên đường Kế hoạch hiện tại.
+
+---
+
+### ❓ PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ)
+
+**Q1: Tính năng "Tỷ lệ Pre-launch quay lại ngày OB (%)" hoạt động ra sao?**
+👉 Mô phỏng việc User đăng ký trước đổ bộ vào game. Hệ thống lấy: `NRU Pre-launch × Tỷ lệ Comeback` và cộng thẳng số lượng user này vào Ngày 1 (D1) của tháng OB. Lượng user này không làm tăng thêm chi phí Marketing của tháng OB.
+
+**Q2: Làm sao để ghi đè (Hardcode) Doanh thu thực tế của các tháng cũ cho khớp số?**
+👉 Để đảm bảo màn hình Tool gọn gàng, tính năng ghi đè doanh thu được chạy ngầm. Bạn hãy tải file **Cấu hình Input** về máy, mở sheet **"Custom Revenue"**, nhập doanh thu thực tế vào tháng bạn muốn ghi đè rồi up lại lên Tool. Tool sẽ tự ưu tiên lấy số đó để tính toán Profit, Rev Share, VAT... thay vì công thức NRU x LTV mặc định.
+
+**Q3: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
+👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu.
+
+**Q4: Peak DAU và MAU mang ý nghĩa gì?**
+*   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
+*   **MAU:** Tổng số lượng User duy nhất (Unique) vào game trong tháng.
+"""
+
+@st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
+def show_manual_dialog():
+    st.markdown(MANUAL_TEXT)
+
+# ==========================================
+# KHỞI TẠO DỮ LIỆU & MOCK DATA CHO DỰ ÁN MẪU
 # ==========================================
 ALL_D_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D210", "D240", "D270", "D300", "D330", "D360"]
 ALL_RR_COLS = ["D1", "D3", "D7", "D14", "D30", "D60", "D90", "D180", "D360"]
@@ -1027,12 +1077,7 @@ for idx, p in enumerate(current_platforms):
 
 # TAB BÁO CÁO P&L TỔNG HỢP
 with rendered_tabs[-2]:
-    col_t1, col_t2 = st.columns([7, 3])
-    with col_t1:
-        st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
-    with col_t2:
-        if st.button("🖨️ Xuất PDF (Mẹo: Đích đến chọn 'Lưu thành PDF')", use_container_width=True, type="secondary"):
-            st.components.v1.html("<script>window.parent.print();</script>", height=0)
+    st.markdown(f'<div class="section-title">📊 Báo Cáo P&L Tổng Hợp (Consolidated) - {cur_proj}</div>', unsafe_allow_html=True)
     
     params = st.session_state[f"params_{cur_proj}"]
     fixed_costs = st.session_state[f"fixed_costs_{cur_proj}"]
@@ -1168,42 +1213,6 @@ with rendered_tabs[-2]:
             mc2.metric("⏳ Thời Gian Hòa Vốn", payback_month, help="Tháng đầu tiên Lợi nhuận lũy kế chuyển sang dương")
             mc3.metric("📈 Tổng Doanh Thu", f"{total_rev_summary:,.0f} đ", help="Doanh thu tích lũy cả vòng đời dự án")
             mc4.metric("🔥 Tỷ Suất ROI Dự Án", f"{roi_camp:,.2f}%", f"Biên LN: {profit_margin:,.2f}%", help="Lợi Nhuận Tổng / Chi Phí Tổng")
-            st.markdown("---")
-
-            # FEATURE SẾP: TỰ ĐỘNG NHẬN ĐỊNH BÁO CÁO (AUTO-INSIGHTS)
-            st.markdown("### 🤖 Hệ Thống Trợ Lý Ảo Phân Tích (Auto-Insights)")
-            insights = []
-            
-            payback_idx = res.index[res['Lợi Nhuận'] > 0].min() if not res[res['Lợi Nhuận'] > 0].empty else -1
-            if payback_idx == -1:
-                insights.append("🔴 **Rủi ro Dòng tiền (Nghiêm trọng):** Dự án KHÔNG thể hòa vốn trong chu kỳ dự phóng. Cần khẩn cấp xem lại trần giá mua User (CPN) hoặc thiết kế lại cấu trúc kiếm tiền (LTV).")
-            elif payback_idx <= 2:
-                insights.append(f"🟢 **Tốc độ Thu hồi vốn (Rất Tốt):** Dự án bắt đầu có lãi chỉ sau {payback_idx} tháng kể từ khi Launching. Dòng tiền xoay vòng nhanh, rủi ro thấp.")
-            elif payback_idx <= 5:
-                insights.append(f"🟡 **Tốc độ Thu hồi vốn (Khá/An toàn):** Mất khoảng {payback_idx} tháng để hòa vốn. Tốc độ này phù hợp với mặt bằng chung các game Mid-core/Hardcore có vòng đời sâu.")
-            else:
-                insights.append(f"🟠 **Tốc độ Thu hồi vốn (Chậm):** Cần tới {payback_idx} tháng mới thu hồi được vốn. Đội vận hành cần đặc biệt dồn lực chăm sóc tập User VIP để đảm bảo tỷ lệ Retention các tháng sau không bị gãy.")
-
-            if profit_margin > 30:
-                insights.append(f"🟢 **Biên Lợi Nhuận (Xuất sắc):** Đạt mức {profit_margin:.1f}%. Dự án có dư địa lợi nhuận rất lớn, có thể cân nhắc duyệt thêm quỹ dự phòng Marketing để 'đập bẹp' đối thủ cạnh tranh.")
-            elif profit_margin >= 15:
-                insights.append(f"🟡 **Biên Lợi Nhuận (Tiêu chuẩn):** Đạt {profit_margin:.1f}%. Mức sinh lời an toàn để công ty duy trì đội ngũ vận hành dự án lâu dài.")
-            elif profit_margin > 0:
-                insights.append(f"🟠 **Biên Lợi Nhuận (Mỏng):** Chỉ ở mức {profit_margin:.1f}%. Dự án nhạy cảm với biến động thị trường. Nếu tỷ giá USD tăng hoặc phí Server đội lên, dự án rất dễ quay đầu lỗ.")
-                
-            if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
-                idx_ob = res.index[res['Tháng'] == 'MONTH OB'][0]
-                launch_roi = res.at[idx_ob, 'Tỷ Trọng MKT/REV']
-                if launch_roi > 1.0:
-                    insights.append(f"⚠️ **Cảnh báo Giai đoạn Launching:** Tỷ trọng MKT/REV tháng đầu lên tới {launch_roi*100:.1f}%. Team đang 'đốt tiền' cực mạnh để gom User. Bắt buộc phải ép CPN xuống ở các tháng kế tiếp để bù lại.")
-                elif launch_roi > 0 and launch_roi < 0.6:
-                    insights.append(f"✨ **Hiệu suất Launching (Quá Đẹp):** Tỷ trọng MKT/REV tháng đầu chỉ ở mức {launch_roi*100:.1f}%. Chiến dịch thâu tóm User đang cực kỳ hiệu quả, tiền chi ra mang lại doanh thu tức thì rất tốt.")
-
-            for item in insights:
-                st.markdown(f"- {item}")
-                
-            st.markdown("### 📝 Ghi chú Báo Cáo (Giám đốc Dự án)")
-            st.text_area("Các nội dung gõ vào đây sẽ được hiển thị khi Xuất PDF trình sếp:", height=100, placeholder="Ví dụ: Đề xuất Board of Directors duyệt cấp ngân sách 15 tỷ cho giai đoạn Launching...")
             st.markdown("---")
 
             res_usd = res.copy()
