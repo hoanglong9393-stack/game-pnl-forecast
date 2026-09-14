@@ -16,7 +16,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 TEAM_DRIVE_URL = "https://drive.google.com/drive/folders/1XvPdexOCJ7Pbkyz6J67eyYA7c_O8k0lV?usp=sharing"
 
 st.set_page_config(page_title="Game P&L Forecast Tool", layout="wide", page_icon="🎮")
-st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
+st.title("🎮 Game P&L Forecast Tool")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
