@@ -735,7 +735,7 @@ def generate_pnl_html(res, is_usd=False):
     
     opex_rows = [
         ('Personel', 'Nhân sự'), ('Server', 'Server'),
-        ('License Fee (Định phí)', 'License Fee'),
+        ('License Fee', 'License Fee'),
         ('Branding (Marketing)', 'Branding (Marketing)'),
         ('Marketing (UA+Tax)', 'Marketing (UA+Tax)'),
         ('Revenue share dev', 'Revenue share dev'), ('VAT', 'VAT'),
