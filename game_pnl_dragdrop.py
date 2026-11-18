@@ -15,8 +15,8 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 # ==========================================
 TEAM_DRIVE_URL = "https://drive.google.com/drive/folders/1XvPdexOCJ7Pbkyz6J67eyYA7c_O8k0lV?usp=sharing"
 
-st.set_page_config(page_title="Game P&L Forecast Tool", layout="wide", page_icon="🎮")
-st.title("🎮 Game P&L Forecast Tool")
+st.set_page_config(page_title="Game P&L Forecast Tool - longht (Vplay)", layout="wide", page_icon="🎮")
+st.title("🎮 Game P&L Forecast Tool - Tác giả: longht (Vplay)")
 
 # ==========================================
 # CUSTOM CSS FOR EXCEL-LIKE TABLE
@@ -64,7 +64,8 @@ MANUAL_TEXT = """
     *   *Khôi phục từ Google Drive:* Bấm nút Đồng bộ ở thanh Menu trái để nạp kho dự án Team.
 
 **Bước 2: Cấu hình Tham số & Chi phí cố định**
-*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, LF...).
+*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, **License Fee**...).
+*   **💡 Lưu ý quan trọng về CPN:** Tại bảng Chi phí Cố định, bạn thấy mục **Branding (Marketing)**. Số tiền này sẽ được cộng với chi phí UA (User Acquisition) để tính ra chỉ số **CPN (Cost Per New User)** thực tế trên báo cáo tổng hợp.
 
 **Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
 Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
@@ -104,6 +105,9 @@ Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể t�
 **Q4: Peak DAU và MAU mang ý nghĩa gì?**
 *   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
 *   **MAU:** Tổng số lượng User duy nhất (Unique) vào game trong tháng.
+
+**Q5: Tại sao tôi gỡ License Fee ra khỏi công thức tính CPN?**
+👉 Vì CPN (Cost Per New User) dùng để đánh giá hiệu quả mua user (Marketing Efficiency). License Fee là chi phí cố định (Fixed Cost) thường trả 1 cục lớn ban đầu. Nếu tính LF vào CPN, tháng đầu tiên ra mắt CPN sẽ bị đội lên vô lý, gây hiểu lầm về hiệu quả chiến dịch UA.
 """
 
 @st.dialog("📖 SỔ TAY HƯỚNG DẪN & FAQ", width="large")
@@ -188,7 +192,8 @@ def get_default_fixed_costs(total_months=25):
         "Tháng": months_label,
         "Nhân sự (VNĐ)": [400000000, 200000000] + [200000000] * (total_months - 2),
         "Server (VNĐ)": [0, 200000000] + [200000000] * (total_months - 2),
-        "LF + Branding (VNĐ)": [675000000, 1800000000] + [50000000] * (total_months - 2)
+        "License Fee (VNĐ)": [675000000, 1000000000] + [0] * (total_months - 2),
+        "Branding (Marketing) (VNĐ)": [675000000, 800000000] + [50000000] * (total_months - 2)
     })
 
 def get_default_traffic(total_months=25, is_android=True):
@@ -275,7 +280,7 @@ def load_project_from_excel(excel_data, imported_proj_name):
     elif 'Traffic Android' in excel_data.sheet_names:
         old_tr = pd.read_excel(excel_data, sheet_name='Traffic Android').fillna(0)
         if "Nhân sự (VNĐ)" in old_tr.columns:
-            fc_cols = ["Tháng"] + [c for c in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"] if c in old_tr.columns]
+            fc_cols = ["Tháng"] + [c for c in ["Nhân sự (VNĐ)", "Server (VNĐ)", "License Fee (VNĐ)", "Branding (Marketing) (VNĐ)"] if c in old_tr.columns]
             st.session_state[f"fixed_costs_{imported_proj_name}"] = migrate_month_ob(old_tr[fc_cols])
         else:
             st.session_state[f"fixed_costs_{imported_proj_name}"] = get_default_fixed_costs(len(old_tr))
@@ -283,7 +288,8 @@ def load_project_from_excel(excel_data, imported_proj_name):
     for p in found_plats:
         if f'Traffic {p}' in excel_data.sheet_names:
             tr_df = pd.read_excel(excel_data, sheet_name=f'Traffic {p}').fillna(0)
-            clean_cols = [c for c in tr_df.columns if c not in ["Nhân sự (VNĐ)", "Server (VNĐ)", "LF + Branding (VNĐ)"]]
+            ignore_cols = ["Nhân sự (VNĐ)", "Server (VNĐ)", "License Fee (VNĐ)", "Branding (Marketing) (VNĐ)", "Spent", "Marketing (UA+Tax)", "CPN", "LF + Branding"]
+            clean_cols = [c for c in tr_df.columns if c not in ignore_cols]
             st.session_state[f"traffic_{p}_{imported_proj_name}"] = migrate_month_ob(tr_df[clean_cols])
         if f'OB Daily {p}' in excel_data.sheet_names:
             st.session_state[f"ob_daily_{p}_{imported_proj_name}"] = pd.read_excel(excel_data, sheet_name=f'OB Daily {p}').fillna(0)
@@ -528,7 +534,7 @@ def format_cell_value(val, is_pct=False, is_usd=False):
 def format_pnl_for_excel(res):
     metrics = [
         'NRU', 'Peak DAU', 'MAU', 'CPN', 'Revenue', 
-        'Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding',
+        'Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)',
         'Revenue share dev', 'VAT', 'Payment channel fee',
         'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận', 'Tỷ Trọng MKT/REV'
     ]
@@ -541,16 +547,16 @@ def format_pnl_for_excel(res):
         elif m == 'MAU': totals.append(res['MAU'].max())
         elif m == 'CPN': 
             t_nru = res['NRU'].sum()
-            t_mkt = res['Marketing (UA+Tax)'].sum() + res['LF + Branding'].sum()
-            totals.append(t_mkt / t_nru if t_nru > 0 else 0)
+            t_mkt_spent = res['Marketing (UA+Tax)'].sum() + res['Branding (Marketing)'].sum()
+            totals.append(t_mkt_spent / t_nru if t_nru > 0 else 0)
         elif m == 'Revenue': totals.append(res['Revenue'].sum())
-        elif m in ['Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí']:
+        elif m in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí']:
             totals.append(res[m].sum())
         elif m == 'Lợi Nhuận': totals.append(res['Lợi Nhuận'].iloc[-1])
         elif m == 'Tỷ Trọng MKT/REV': 
             t_rev = res['Revenue'].sum()
-            t_mkt = res['Marketing (UA+Tax)'].sum()
-            totals.append(t_mkt / t_rev if t_rev > 0 else 0)
+            t_mkt_spent = res['Marketing (UA+Tax)'].sum() + res['Branding (Marketing)'].sum()
+            totals.append(t_mkt_spent / t_rev if t_rev > 0 else 0)
         else: totals.append(None)
         
     df_export["Total"] = totals
@@ -642,7 +648,7 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                 elif row_label == 'Spent':
                     current_fill = fill_spent
                     current_font = font_black_bold
-                elif row_label in ['Nhân sự', 'Server', 'Marketing (UA+Tax)', 'LF + Branding', 'Revenue share dev', 'VAT', 'Payment channel fee']:
+                elif row_label in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Revenue share dev', 'VAT', 'Payment channel fee']:
                     current_fill = fill_opex
                 elif row_label == 'Lợi Nhuận':
                     current_font = font_black_bold
@@ -690,9 +696,11 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
 
 def generate_pnl_html(res, is_usd=False):
     total_nru = res['NRU'].sum()
-    total_mkt = res['Marketing (UA+Tax)'].sum()
-    total_lf = res['LF + Branding'].sum()
-    cpn_total = (total_mkt + total_lf) / total_nru if total_nru > 0 else 0
+    total_ua_ads = res['Marketing (UA+Tax)'].sum()
+    total_branding = res['Branding (Marketing)'].sum()
+    
+    # Công thức CPN mới: Chỉ tính UA và Branding, bỏ License Fee
+    cpn_total = (total_ua_ads + total_branding) / total_nru if total_nru > 0 else 0
 
     html = '<div class="dataframe-container"><table class="custom-pnl">'
     html += '<tr><th>Dashboard</th><th>Total</th>'
@@ -727,7 +735,9 @@ def generate_pnl_html(res, is_usd=False):
     
     opex_rows = [
         ('Personel', 'Nhân sự'), ('Server', 'Server'),
-        ('Marketing (UA+Tax)', 'Marketing (UA+Tax)'), ('LF + Branding', 'LF + Branding'),
+        ('License Fee (Định phí)', 'License Fee'),
+        ('Branding (Marketing)', 'Branding (Marketing)'),
+        ('Marketing (UA+Tax)', 'Marketing (UA+Tax)'),
         ('Revenue share dev', 'Revenue share dev'), ('VAT', 'VAT'),
         ('Payment channel fee', 'Payment channel fee')
     ]
@@ -753,7 +763,7 @@ def generate_pnl_html(res, is_usd=False):
         html += f'<td class="{cls}">{format_cell_value(v, is_usd=is_usd)}</td>'
     html += '</tr>'
     
-    avg_mkt_rev = total_mkt / res["Revenue"].sum() if res["Revenue"].sum() > 0 else 0
+    avg_mkt_rev = (total_ua_ads + total_branding) / res["Revenue"].sum() if res["Revenue"].sum() > 0 else 0
     html += f'<tr class="row-roi"><td>Tỷ Trọng MKT/REV</td><td>{format_cell_value(avg_mkt_rev, is_pct=True)}</td>'
     for v in res['Tỷ Trọng MKT/REV']: html += f'<td>{format_cell_value(v, is_pct=True)}</td>'
     html += '</tr>'
@@ -954,7 +964,7 @@ with rendered_tabs[0]:
 
     st.markdown("---")
     st.markdown(f'<div class="section-title">💸 2. Kế Hoạch Chi Phí Cố Định Khác (Fixed Costs)</div>', unsafe_allow_html=True)
-    st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, LF, Branding).")
+    st.info("Bảng này chứa các chi phí không phụ thuộc trực tiếp vào số lượng User (Server, Nhân sự, License Fee...).")
     
     fc_df = st.session_state[f"fixed_costs_{cur_proj}"]
     styled_fc = fc_df.style.apply(highlight_ob_row, axis=1)
@@ -964,7 +974,8 @@ with rendered_tabs[0]:
         column_config={
             "Nhân sự (VNĐ)": st.column_config.NumberColumn("Nhân sự (VNĐ)", format="%d", min_value=0),
             "Server (VNĐ)": st.column_config.NumberColumn("Server (VNĐ)", format="%d", min_value=0),
-            "LF + Branding (VNĐ)": st.column_config.NumberColumn("LF + Branding (VNĐ)", format="%d", min_value=0)
+            "License Fee (VNĐ)": st.column_config.NumberColumn("License Fee (VNĐ)", format="%d", min_value=0),
+            "Branding (Marketing) (VNĐ)": st.column_config.NumberColumn("Branding (Marketing) (VNĐ)", format="%d", min_value=0)
         }
     )
     if not edited_fc.astype(str).equals(fc_df.astype(str)):
@@ -1066,6 +1077,7 @@ for idx, p in enumerate(current_platforms):
         c_ob = float(tr_ob['CPN (VNĐ)'].iloc[0]) if len(tr_ob) > 0 else 0
         
         launch_nru = n_pre + n_ob
+        # CPN Launch chỉ tính tiền UA + Branding, KHÔNG tính License Fee
         launch_budget = (n_pre * c_pre) + (n_ob * c_ob)
         launch_cpn = launch_budget / launch_nru if launch_nru > 0 else 0
         
@@ -1084,9 +1096,9 @@ with rendered_tabs[-2]:
     
     # FEATURE SẾP: SCENARIO PLANNING
     with st.expander("🕹️ Chế độ kịch bản (Scenario Planning - What IF)", expanded=False):
-        st.info("Kéo thanh trượt để giả lập các kịch bản thực tế (Tăng/giảm chi phí và doanh thu) mà không làm ảnh hưởng đến cấu hình gốc.")
+        st.info("Kéo thanh trượt để giả lập các kịch bản thực tế (Tăng/giảm chi phí và doanh thu) mà không làm ảnh hưởng đến cấu hình gốc. *Lưu ý: Điều chỉnh CPN chỉ tác động tới UA và Branding, không tác động tới License Fee.*")
         sc_col1, sc_col2 = st.columns(2)
-        cpn_adj = sc_col1.slider("Điều chỉnh Chi Phí MKT (CPN) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là mua User đắt lên, Âm là rẻ đi")
+        cpn_adj = sc_col1.slider("Điều chỉnh Chi Phí MKT (CPN - UA & Branding) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là mua User đắt lên, Âm là rẻ đi")
         ltv_adj = sc_col2.slider("Điều chỉnh Doanh Thu (LTV) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là game cực hot hút máu tốt, Âm là sập hầm")
         
         cpn_multiplier = 1.0 + (cpn_adj / 100.0)
@@ -1103,7 +1115,8 @@ with rendered_tabs[-2]:
             total_nru_arr = np.zeros(len(res))
             global_daily_dau = np.zeros(len(res) * 30)
             total_mau_arr = np.zeros(len(res))
-            total_mkt_arr = np.zeros(len(res))
+            total_ua_arr = np.zeros(len(res))
+            total_branding_arr = np.zeros(len(res))
             total_rev_arr = np.zeros(len(res))
             comeback_rate = params.get('prelaunch_comeback_pct', 60.0) / 100.0
             
@@ -1129,13 +1142,17 @@ with rendered_tabs[-2]:
                         p_mkt.append(u * float(r['CPN (VNĐ)']))
                         
                 total_nru_arr += np.array(p_nru)
-                total_mkt_arr += np.array(p_mkt)
+                total_ua_arr += np.array(p_mkt)
                 total_rev_arr += calculate_platform_rev_phase_mapping(tr_df, ob_calc, ltv_df)
                 
                 p_daily_dau, p_mau = calculate_platform_dau_phase_mapping(tr_df, ob_calc, rr_df)
                 global_daily_dau += p_daily_dau
                 total_mau_arr += p_mau
                 
+            # Tách Branding và License Fee từ Fixed Costs
+            total_branding_arr = pd.to_numeric(fixed_costs['Branding (Marketing) (VNĐ)'], errors='coerce').fillna(0.0).values
+            res['License Fee'] = pd.to_numeric(fixed_costs['License Fee (VNĐ)'], errors='coerce').fillna(0.0).values
+
             custom_rev_df = st.session_state.get(f"custom_revenue_{cur_proj}")
             if custom_rev_df is not None and not custom_rev_df.empty:
                 c_map = dict(zip(custom_rev_df['Tháng'].replace("🔒 Month OB (Auto)", "Month OB"), custom_rev_df['Doanh Thu Tùy Chỉnh (VNĐ)']))
@@ -1148,8 +1165,9 @@ with rendered_tabs[-2]:
                     except:
                         pass
             
-            # ÁP DỤNG SCENARIO MULTIPLIER
-            total_mkt_arr = total_mkt_arr * cpn_multiplier
+            # ÁP DỤNG SCENARIO MULTIPLIER: Chỉ áp dụng cho UA và Branding
+            total_ua_arr = total_ua_arr * cpn_multiplier
+            total_branding_arr = total_branding_arr * cpn_multiplier
             total_rev_arr = total_rev_arr * ltv_multiplier
                         
             res['NRU'] = total_nru_arr
@@ -1161,37 +1179,43 @@ with rendered_tabs[-2]:
                 
             res['Peak DAU'] = peak_daus
             res['MAU'] = total_mau_arr
-            res['Marketing (UA+Tax)'] = total_mkt_arr
+            res['Marketing (UA+Tax)'] = total_ua_arr
+            res['Branding (Marketing)'] = total_branding_arr
             res['Revenue'] = total_rev_arr
             
             res['Nhân sự'] = pd.to_numeric(fixed_costs['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0).values
             res['Server'] = pd.to_numeric(fixed_costs['Server (VNĐ)'], errors='coerce').fillna(0.0).values
-            res['LF + Branding'] = pd.to_numeric(fixed_costs['LF + Branding (VNĐ)'], errors='coerce').fillna(0.0).values
             
-            res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['LF + Branding']) / res['NRU'], 0.0)
+            # Công thức CPN mới: Dựa trên UA và Branding
+            res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['Branding (Marketing)']) / res['NRU'], 0.0)
+            
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
             res['VAT'] = res['Revenue'] * (params.get('vat', 10.0) / 100.0)
             res['Payment channel fee'] = res['Revenue'] * (params.get('payment_fee', 5.0) / 100.0)
             
             res['Tổng Chi Phí'] = (
                 res['Marketing (UA+Tax)'] + res['Nhân sự'] + res['Server'] +
-                res['LF + Branding'] + res['Revenue share dev'] + res['VAT'] + res['Payment channel fee']
+                res['Branding (Marketing)'] + res['License Fee'] +
+                res['Revenue share dev'] + res['VAT'] + res['Payment channel fee']
             )
             res['Lợi nhuận tháng'] = res['Revenue'] - res['Tổng Chi Phí']
             res['Lợi Nhuận'] = res['Lợi nhuận tháng'].cumsum()
-            res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, res['Marketing (UA+Tax)'] / res['Revenue'], 0.0)
+            
+            # Tỷ trọng MKT/REV mới: Dựa trên UA và Branding
+            res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, (res['Marketing (UA+Tax)'] + res['Branding (Marketing)']) / res['Revenue'], 0.0)
             
             if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
                 idx_pre = res.index[res['Tháng'] == 'PRE-LAUNCH'][0]
                 idx_ob = res.index[res['Tháng'] == 'MONTH OB'][0]
                 
-                mkt_pre = res.at[idx_pre, 'Marketing (UA+Tax)']
-                mkt_ob = res.at[idx_ob, 'Marketing (UA+Tax)']
-                brand_ob = res.at[idx_ob, 'LF + Branding']
+                ua_pre = res.at[idx_pre, 'Marketing (UA+Tax)']
+                brand_pre = res.at[idx_pre, 'Branding (Marketing)']
+                ua_ob = res.at[idx_ob, 'Marketing (UA+Tax)']
+                brand_ob = res.at[idx_ob, 'Branding (Marketing)']
                 rev_ob = res.at[idx_ob, 'Revenue']
                 
                 if rev_ob > 0:
-                    res.at[idx_ob, 'Tỷ Trọng MKT/REV'] = (mkt_pre + mkt_ob + brand_ob) / rev_ob
+                    res.at[idx_ob, 'Tỷ Trọng MKT/REV'] = (ua_pre + brand_pre + ua_ob + brand_ob) / rev_ob
             
             st.session_state[f"pnl_res_{cur_proj}"] = res
             
@@ -1217,7 +1241,7 @@ with rendered_tabs[-2]:
 
             res_usd = res.copy()
             usd_rate = float(params.get('usd_rate', 25400.0))
-            monetary_cols = ['Marketing (UA+Tax)', 'Revenue', 'Nhân sự', 'Server', 'LF + Branding', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
+            monetary_cols = ['Marketing (UA+Tax)', 'Branding (Marketing)', 'License Fee', 'Revenue', 'Nhân sự', 'Server', 'CPN', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận']
             for col in monetary_cols: res_usd[col] = res_usd[col] / usd_rate
             
             col_down1, col_down2 = st.columns(2)
