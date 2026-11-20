@@ -55,7 +55,7 @@ MANUAL_TEXT = """
 ### 🛠️ PHẦN 1: HƯỚNG DẪN SỬ DỤNG (USER MANUAL)
 
 **Bước 1: Khởi tạo & Quản lý dự án**
-*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau đó bấm **Tạo & Lưu**.
+*   **Tạo mới:** Ở thanh menu bên trái (Sidebar), chọn `➕ Tạo Dự Án Mới`. Nhập tên dự án và số tháng dự phóng, sau daso bấm **Tạo & Lưu**.
     > 💡 **Mẹo (Số tháng dự phóng):** Tool mặc định gợi ý 25 tháng cho chu kỳ 2 năm. Lý do là để báo cáo P&L tính toán trọn vẹn LTV của những user tham gia ở tháng thứ 24 (tháng cuối cùng). Nếu chỉ để 24 tháng, doanh thu Cohort của tệp user tháng 24 sẽ bị cắt ngang, khiến báo cáo không phản ánh đủ giá trị vòng đời.
 *   **Thêm nền tảng (Platform) / Thị trường:** Mặc định hệ thống tạo sẵn Android và iOS. Tính năng `➕ Thêm Nền Tảng Mới` cho phép bạn tạo thêm các Kênh (VD: Web, PC, Mini-app) hoặc **Thị trường (VD: Global, SEA, ThaiLand)**. Mỗi Platform/Thị trường được tạo thêm sẽ có một cụm bảng cấu hình (NRU, RR, LTV) hoàn toàn độc lập, rất tiện để phân tích chéo.
 *   **Lưu & Khôi phục dữ liệu:** 
@@ -64,7 +64,7 @@ MANUAL_TEXT = """
     *   *Khôi phục từ Google Drive:* Bấm nút Đồng bộ ở thanh Menu trái để nạp kho dự án Team.
 
 **Bước 2: Cấu hình Tham số & Chi phí cố định**
-*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server, **License Fee**...).
+*   **Tab ⚙️ Tham Số & Định Phí:** Tại đây bạn hãy khai báo Tỷ giá USD, Rev Share Dev, VAT, Payment Fee và **Tỷ lệ Pre-launch quay lại ngày OB (%)** riêng biệt cho từng dự án. Bên dưới là bảng chi phí cố định (Lương, Server...).
 *   **💡 Lưu ý quan trọng về CPN:** Tại bảng Chi phí Cố định, bạn thấy mục **Branding (Marketing)**. Số tiền này sẽ được cộng với chi phí UA (User Acquisition) để tính ra chỉ số **CPN (Cost Per New User)** thực tế trên báo cáo tổng hợp.
 
 **Bước 3: Lên kế hoạch Traffic & Phân bổ 30 ngày OB**
@@ -72,14 +72,14 @@ Chuyển sang Tab của từng nền tảng (VD: 📱 Android) để thao tác:
 *   **Bảng Kế hoạch Traffic Tháng:** Nhập số lượng User (NRU) và Giá mua 1 User (CPN) cho từng tháng.
     > ⚠️ **Chú ý:** Dòng **`🔒 Month OB (Auto)`** đã được khóa. Bạn KHÔNG nhập số vào dòng này.
 *   **Chi tiết Phân bổ 30 Ngày OB:** Mở lịch 📅 bên dưới. Tại đây, bạn có 2 lựa chọn:
-    1.  *Cách tự động:* Nhập Tổng NRU và CPN trung bình $\\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)**.
-    2.  *Cách thủ công:* Gõ tay (hoặc copy/paste từ Excel) trực tiếp từng ngày (Day 1 $\\rightarrow$ Day 30).
+    1.  *Cách tự động:* Nhập Tổng NRU và CPN trung bình $\rightarrow$ Bấm nút **⚡ Chia mốc dồn đầu (50-20-30)**.
+    2.  *Cách thủ công:* Gõ tay (hoặc copy/paste từ Excel) trực tiếp từng ngày (Day 1 $\rightarrow$ Day 30).
     *Số liệu từ bảng 30 ngày sẽ tự động cuộn lên chốt cho dòng `🔒 Month OB (Auto)` ở bảng trên.*
 
 **Bước 4: Thiết lập Retention Rate (RR) & LTV**
 *   **Retention Rate (Tỷ lệ giữ chân):** Khai báo tỷ lệ user mở lại game ở các mốc D1, D3, D7... D360.
 *   **LTV (Lifetime Value):** Khai báo doanh thu tích lũy trung bình trên 1 user. Bạn có thể chia nhiều Phase.
-    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\\ge$** mốc ngày hôm trước.
+    > ⚠️ **QUY TẮC CỐT LÕI:** LTV là giá trị lũy kế, nên mốc ngày hôm sau **BẮT BUỘC phải $\ge$** mốc ngày hôm trước.
 
 **Bước 5: Chạy mô phỏng & Xuất báo cáo**
 Tại Tab **📊 Báo Cáo P&L Tổng Hợp**:
@@ -100,7 +100,7 @@ Chuyển sang Tab **📈 So Sánh & Benchmark**. Tại đây bạn có thể t�
 👉 Để đảm bảo màn hình Tool gọn gàng, tính năng ghi đè doanh thu được chạy ngầm. Bạn hãy tải file **Cấu hình Input** về máy, mở sheet **"Custom Revenue"**, nhập doanh thu thực tế vào tháng bạn muốn ghi đè rồi up lại lên Tool. Tool sẽ tự ưu tiên lấy số đó để tính toán Profit, Rev Share, VAT... thay vì công thức NRU x LTV mặc định.
 
 **Q3: Tại sao bảng P&L Tổng hợp lại bị "âm" Doanh thu một cách vô lý?**
-👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\\rightarrow$ kéo sập toàn bộ doanh thu.
+👉 Vì LTV là doanh thu tích lũy, nó không được phép giảm. Nếu bạn nhập LTV D14 thấp hơn LTV D7, hệ thống sẽ hiểu là user bị "âm tiền" (hoàn tiền) $\rightarrow$ kéo sập toàn bộ doanh thu.
 
 **Q4: Peak DAU và MAU mang ý nghĩa gì?**
 *   **Peak DAU:** Là số lượng người chơi đăng nhập (DAU) cao nhất đạt được trong tháng đó.
@@ -535,6 +535,7 @@ def format_pnl_for_excel(res):
     metrics = [
         'NRU', 'Peak DAU', 'MAU', 'CPN', 'Revenue', 
         'Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)',
+        'Marketing (UA+Tax)', # <--- ĐÃ THÊM LẠI DÒNG NÀY
         'Revenue share dev', 'VAT', 'Payment channel fee',
         'Tổng Chi Phí', 'Lợi nhuận tháng', 'Lợi Nhuận', 'Tỷ Trọng MKT/REV'
     ]
@@ -550,7 +551,7 @@ def format_pnl_for_excel(res):
             t_mkt_spent = res['Marketing (UA+Tax)'].sum() + res['Branding (Marketing)'].sum()
             totals.append(t_mkt_spent / t_nru if t_nru > 0 else 0)
         elif m == 'Revenue': totals.append(res['Revenue'].sum())
-        elif m in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí']:
+        elif m in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Marketing (UA+Tax)', 'Revenue share dev', 'VAT', 'Payment channel fee', 'Tổng Chi Phí']: # <--- CŨNG THÊM VÀO ĐÂY
             totals.append(res[m].sum())
         elif m == 'Lợi Nhuận': totals.append(res['Lợi Nhuận'].iloc[-1])
         elif m == 'Tỷ Trọng MKT/REV': 
@@ -648,7 +649,7 @@ def generate_report_excel(res_vnd, res_usd, current_platforms, cur_proj):
                 elif row_label == 'Spent':
                     current_fill = fill_spent
                     current_font = font_black_bold
-                elif row_label in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Revenue share dev', 'VAT', 'Payment channel fee']:
+                elif row_label in ['Nhân sự', 'Server', 'License Fee', 'Branding (Marketing)', 'Marketing (UA+Tax)', 'Revenue share dev', 'VAT', 'Payment channel fee']:
                     current_fill = fill_opex
                 elif row_label == 'Lợi Nhuận':
                     current_font = font_black_bold
@@ -699,7 +700,6 @@ def generate_pnl_html(res, is_usd=False):
     total_ua_ads = res['Marketing (UA+Tax)'].sum()
     total_branding = res['Branding (Marketing)'].sum()
     
-    # Công thức CPN mới: Chỉ tính UA và Branding, bỏ License Fee
     cpn_total = (total_ua_ads + total_branding) / total_nru if total_nru > 0 else 0
 
     html = '<div class="dataframe-container"><table class="custom-pnl">'
@@ -735,7 +735,7 @@ def generate_pnl_html(res, is_usd=False):
     
     opex_rows = [
         ('Personel', 'Nhân sự'), ('Server', 'Server'),
-        ('License Fee', 'License Fee'),
+        ('License Fee (Định phí)', 'License Fee'),
         ('Branding (Marketing)', 'Branding (Marketing)'),
         ('Marketing (UA+Tax)', 'Marketing (UA+Tax)'),
         ('Revenue share dev', 'Revenue share dev'), ('VAT', 'VAT'),
@@ -1077,7 +1077,6 @@ for idx, p in enumerate(current_platforms):
         c_ob = float(tr_ob['CPN (VNĐ)'].iloc[0]) if len(tr_ob) > 0 else 0
         
         launch_nru = n_pre + n_ob
-        # CPN Launch chỉ tính tiền UA + Branding, KHÔNG tính License Fee
         launch_budget = (n_pre * c_pre) + (n_ob * c_ob)
         launch_cpn = launch_budget / launch_nru if launch_nru > 0 else 0
         
@@ -1095,7 +1094,7 @@ with rendered_tabs[-2]:
     fixed_costs = st.session_state[f"fixed_costs_{cur_proj}"]
     
     # FEATURE SẾP: SCENARIO PLANNING
-    with st.expander("🕹️ Chế độ kịch bản (Scenario Planning - What IF)", expanded=False):
+    with st.expander("🕹️ Chế độ kịch bản (Scenario PLANNING - What IF)", expanded=False):
         st.info("Kéo thanh trượt để giả lập các kịch bản thực tế (Tăng/giảm chi phí và doanh thu) mà không làm ảnh hưởng đến cấu hình gốc. *Lưu ý: Điều chỉnh CPN chỉ tác động tới UA và Branding, không tác động tới License Fee.*")
         sc_col1, sc_col2 = st.columns(2)
         cpn_adj = sc_col1.slider("Điều chỉnh Chi Phí MKT (CPN - UA & Branding) (%)", min_value=-50, max_value=100, value=0, step=5, help="Dương là mua User đắt lên, Âm là rẻ đi")
@@ -1149,7 +1148,6 @@ with rendered_tabs[-2]:
                 global_daily_dau += p_daily_dau
                 total_mau_arr += p_mau
                 
-            # Tách Branding và License Fee từ Fixed Costs
             total_branding_arr = pd.to_numeric(fixed_costs['Branding (Marketing) (VNĐ)'], errors='coerce').fillna(0.0).values
             res['License Fee'] = pd.to_numeric(fixed_costs['License Fee (VNĐ)'], errors='coerce').fillna(0.0).values
 
@@ -1165,7 +1163,6 @@ with rendered_tabs[-2]:
                     except:
                         pass
             
-            # ÁP DỤNG SCENARIO MULTIPLIER: Chỉ áp dụng cho UA và Branding
             total_ua_arr = total_ua_arr * cpn_multiplier
             total_branding_arr = total_branding_arr * cpn_multiplier
             total_rev_arr = total_rev_arr * ltv_multiplier
@@ -1185,8 +1182,6 @@ with rendered_tabs[-2]:
             
             res['Nhân sự'] = pd.to_numeric(fixed_costs['Nhân sự (VNĐ)'], errors='coerce').fillna(0.0).values
             res['Server'] = pd.to_numeric(fixed_costs['Server (VNĐ)'], errors='coerce').fillna(0.0).values
-            
-            # Công thức CPN mới: Dựa trên UA và Branding
             res['CPN'] = np.where(res['NRU'] > 0, (res['Marketing (UA+Tax)'] + res['Branding (Marketing)']) / res['NRU'], 0.0)
             
             res['Revenue share dev'] = res['Revenue'] * (params.get('rev_share', 20.2) / 100.0)
@@ -1200,8 +1195,6 @@ with rendered_tabs[-2]:
             )
             res['Lợi nhuận tháng'] = res['Revenue'] - res['Tổng Chi Phí']
             res['Lợi Nhuận'] = res['Lợi nhuận tháng'].cumsum()
-            
-            # Tỷ trọng MKT/REV mới: Dựa trên UA và Branding
             res['Tỷ Trọng MKT/REV'] = np.where(res['Revenue'] > 0, (res['Marketing (UA+Tax)'] + res['Branding (Marketing)']) / res['Revenue'], 0.0)
             
             if 'PRE-LAUNCH' in res['Tháng'].values and 'MONTH OB' in res['Tháng'].values:
